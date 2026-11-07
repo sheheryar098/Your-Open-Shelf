@@ -1,172 +1,181 @@
-# YOS — Your Open Shelf
+# YOS: Your Open Shelf
 
-A community book exchange that runs on credits. Members list physical books they own. Other members request them with YOS credits. The sender ships the book directly to the requester and earns a credit once the exchange completes.
+[![CI](https://github.com/sheheryar098/Your-Open-Shelf/actions/workflows/ci.yml/badge.svg)](https://github.com/sheheryar098/Your-Open-Shelf/actions/workflows/ci.yml)
 
-> **List a book. Send it to another reader. Earn a credit. Use that credit to request your next read.**
+**List a book. Send it to another reader. Earn a credit. Use that credit to request your next read.**
 
-This repository is the website MVP described in the *YOS Global Business & Platform Blueprint* (§24.1). It's a responsive web app built with Next.js 16 (App Router, Server Actions) and PostgreSQL. It has no other runtime dependencies apart from `zod`.
+YOS is a community book exchange. Members list physical books they own, other members request them with credits, and the owner posts the book directly to the reader. When the exchange completes, the sender earns a credit to spend on any other book on the shelf. Nobody has to find someone who wants their exact book.
 
-## Quick start
+![YOS home page](docs/screenshots/home.png)
+
+## Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [Scripts](#scripts)
+- [Project structure](#project-structure)
+- [Running in production](#running-in-production)
+- [Status and roadmap](#status-and-roadmap)
+- [Contributing](#contributing)
+
+## Features
+
+**For members**
+
+- Browse and search by title, author, ISBN, category, format, language and condition, filtered to books that can actually ship to you
+- List a book from the catalog or by hand, with photos of your own copy and an honest condition note
+- Request books with credits, choose a delivery address, and follow each exchange through accepted, shipped and delivered
+- A wallet showing available, reserved and pending credits, with the full history behind every change
+- Messages between the two members of an exchange, feedback once it completes, and disputes when something goes wrong
+- A wish list that alerts you when a copy that can reach you is listed
+- Country-aware from the first visit, with exchanges limited to shipping routes we support
+- Download your data or close your account at any time
+
+**For the team running it**
+
+- Queues for disputes, reports and support tickets
+- Member, listing and exchange management, with restrictions, suspensions and deadline extensions
+- A credit ledger that can't be edited after the fact, with reconciliation and a CSV export
+- Country and shipping-route controls: tracking rules, delivery estimates, customs notices, weight limits
+- Analytics on completed exchanges, dispatch times, disputes and route performance
+- Job and email monitoring, plus an audit log of every staff action
+
+## Screenshots
+
+| Explore books                                | Book page                              |
+| -------------------------------------------- | -------------------------------------- |
+| ![Explore books](docs/screenshots/explore.png) | ![Book page](docs/screenshots/book.png) |
+
+| A request waiting for the sender                     | Credit wallet                              |
+| ---------------------------------------------------- | ------------------------------------------ |
+| ![Exchange page](docs/screenshots/exchange.png)      | ![Credit wallet](docs/screenshots/wallet.png) |
+
+| Admin overview                             | On a phone                                         |
+| ------------------------------------------ | -------------------------------------------------- |
+| ![Admin overview](docs/screenshots/admin.png) | <img src="docs/screenshots/mobile.png" width="260" alt="Home page on a phone"> |
+
+## Tech stack
+
+- [Next.js 16](https://nextjs.org) with the App Router, Server Components and Server Actions
+- [PostgreSQL](https://www.postgresql.org) 14 or later, accessed with plain SQL through [`pg`](https://node-postgres.com)
+- TypeScript, [Zod](https://zod.dev) for input validation
+- [Vitest](https://vitest.dev) for integration tests against a real database
+- ESLint and Prettier, with GitHub Actions running lint, tests, build and a bundle-size budget
+
+There's no ORM and no CSS framework. The styles are a single stylesheet with light and dark themes.
+
+## Getting started
+
+You'll need Node.js 20 or later and PostgreSQL 14 or later.
 
 ```bash
-# 1. PostgreSQL 14+ with a database and role
-createuser -P yos          # password: yos
+# 1. Create a database user and two databases (one for the app, one for tests)
+createuser -P yos            # enter the password "yos"
 createdb -O yos yos
-createdb -O yos yos_test   # for the test suite
+createdb -O yos yos_test
 
-# 2. Install, configure, migrate and seed
+# 2. Install and configure
+git clone https://github.com/sheheryar098/Your-Open-Shelf.git
+cd Your-Open-Shelf
 npm install
 cp .env.example .env
-npm run db:reset           # applies migrations and loads demo data (development only)
 
-# 3. Run
-npm run dev                # http://localhost:3000
-npm test                   # test suite (uses yos_test)
-npm run check              # lint + import boundaries, tests, build, bundle budget (same as CI)
+# 3. Create the schema and load demo data
+npm run db:reset
+
+# 4. Start the app
+npm run dev
 ```
 
-Coding conventions live in `CLAUDE.md`. Frontend work follows the `frontend-architecture` skill. Backend work follows `api-design`, `background-jobs` and `caching`. All four are vendored in `.claude/skills/`.
+Open http://localhost:3000 and sign in with one of the demo accounts. They all use the password `yos-demo-password`.
 
-**Demo accounts** (password `yos-demo-password`):
+| Email                 | Who                                                          |
+| --------------------- | ------------------------------------------------------------ |
+| `admin@yos.local`     | Administrator, with the full admin area                       |
+| `moderator@yos.local` | Moderator: disputes, reports, support and listings            |
+| `maya@yos.local`      | UK member who has sent a book to Alex and requested one from Sam |
+| `alex@yos.local`      | UK member with a book on its way from Maya                    |
+| `sam@yos.local`       | Irish member with Maya's request waiting for a response       |
+| `jordan@yos.local`    | US member waiting for a book from Priya in Canada             |
+| `priya@yos.local`     | Canadian member who has accepted Jordan's request             |
 
-| Email | Role | Notes |
-|---|---|---|
-| `admin@yos.local` | Admin | Full admin area |
-| `moderator@yos.local` | Moderator | Disputes, reports, support, listing moderation |
-| `maya@yos.local` | Member (UK) | Has completed the blueprint's §3.2 example exchange with Alex |
-| `alex@yos.local` | Member (UK) | Has a book in transit from Maya |
-| `sam@yos.local` | Member (Ireland) | Has a request from Maya waiting for a response |
-| `jordan@yos.local` / `priya@yos.local` | Members (US / Canada) | Cross-border exchange, accepted and waiting for dispatch |
+In development, emails aren't sent. They're stored in an outbox you can read at http://localhost:3000/dev/outbox, so you can click verification and password-reset links.
 
-In development, email is written to an outbox, not sent. Open `/dev/outbox` to click verification and password-reset links. Set `ENABLE_DEV_OUTBOX=true`; the outbox never works in production.
+## Configuration
 
-## Scheduled jobs
+Settings come from environment variables. `.env.example` has working defaults for local development.
 
-Scheduled work is split into small jobs in `src/server/jobs/runner.ts`: two email lanes, expiring requests, missed dispatch, auto-confirmation, completion after the dispute window, reminders, stale listings, address redaction and cache purge. You can trigger them three ways:
+| Variable            | Default                                    | Purpose                                                           |
+| ------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
+| `DATABASE_URL`      | `postgres://yos:yos@localhost:5432/yos`    | PostgreSQL connection string                                      |
+| `APP_URL`           | `http://localhost:3000`                    | Public URL, used in email links                                   |
+| `UPLOAD_DIR`        | `storage/uploads`                          | Where photos and evidence are stored                              |
+| `JOBS_SECRET`       | `change-me`                                | Secret for `POST /api/v1/jobs`. The endpoint is off until you change it. |
+| `ENABLE_DEV_OUTBOX` | `true`                                     | Shows `/dev/outbox`. It never works in production builds.         |
+| `CATALOG_LOOKUP`    | empty                                      | Set to `openlibrary` to fill in book details from an ISBN         |
+| `TEST_DATABASE_URL` | `postgres://yos:yos@localhost:5432/yos_test` | Database used by `npm test`. It's wiped on every run.           |
 
-- `npm run jobs`, from cron every few minutes, or
-- `POST /api/v1/jobs` with the header `x-jobs-secret: $JOBS_SECRET`, or
-- **Run all jobs now** in the admin area.
+Deadlines, limits and other business rules live in [`src/server/config.ts`](src/server/config.ts).
 
-Member pages also trigger them opportunistically, at most once a minute per instance.
+## Scripts
 
-How the jobs behave:
+| Command                | What it does                                                    |
+| ---------------------- | --------------------------------------------------------------- |
+| `npm run dev`          | Start the development server                                    |
+| `npm run build`        | Production build                                                |
+| `npm start`            | Serve the production build                                      |
+| `npm test`             | Run the test suite against `TEST_DATABASE_URL`                  |
+| `npm run lint`         | Check formatting, lint rules (including import boundaries) and types |
+| `npm run format`       | Format everything with Prettier                                 |
+| `npm run bundle:check` | Fail if any page's JavaScript is over its budget (run after a build) |
+| `npm run check`        | Everything CI runs: lint, tests, build and the bundle check     |
+| `npm run db:migrate`   | Apply new migrations                                            |
+| `npm run db:seed`      | Load reference data and demo accounts                           |
+| `npm run db:reset`     | Drop everything, migrate and seed. Development only.            |
+| `npm run jobs`         | Run the scheduled jobs once                                     |
 
-- **Safe to repeat.** Each item is handled in its own transaction under `FOR UPDATE SKIP LOCKED` and re-checks its state first, so running an item twice does no harm. Each job also holds a Postgres advisory lock, so only one instance runs it at a time.
-- **Poison items can't block the queue.** A failing item is retried on later runs. After 5 failures it's parked in `job_failures` and skipped, and staff can retry or dismiss it under **Admin → Jobs & queues**.
-- **Email.** Email is written in the same transaction as the change it describes (outbox pattern). Security mail (verification, password reset) has its own lane. Retries use exponential backoff with jitter. Permanent failures go straight to `dead`.
-- **Observability.** Every run writes a structured log line and a `job_runs` row. `GET /api/v1/health` returns 503 when email is stale or dead, items are parked, or exchange deadlines are overdue, so alerts fire on age as well as failures.
-
-## HTTP API
-
-`docs/openapi.yaml` (OpenAPI 3.1) documents the endpoints. Everything is versioned under `/api/v1`, success responses are wrapped in `{ data }`, errors use RFC 9457 `application/problem+json`, and 429s include `Retry-After`. The member-facing site uses Server Actions, which are not a public API. Request idempotency keys are matched against the request they were first used for: replaying the same request returns the original result, and reusing a key for a different request is refused. Catalog search and wallet history use cursor pagination.
-
-## Caching
-
-The only cache is in front of a slow, rate-limited upstream: the optional Open Library ISBN lookup (`src/server/cache.ts`). It is cache-aside in Postgres with versioned keys (`isbn:v1:…`), a 7-day TTL plus jitter, 1-hour negative caching, no caching of errors, single-flight for concurrent misses, and hit/miss/error counters shown in the admin area. Country and route lookups are indexed primary-key reads and aren't cached. Request-time eligibility checks always read the database.
-
-## Architecture
+## Project structure
 
 ```
 src/
-  app/          Routing, layouts and pages only. Composes features
-  features/     One folder per feature. Features never import each other (enforced by ESLint)
-    listings/     components/ (BookCard, CopyFields, ListingBadge), api/actions.ts
-    exchanges/    components/ (ExchangeList, ExchangeBadge), api/actions.ts
-    accounts/     api/ (auth and account actions)
-    support/      components/ReportForm, api/actions.ts
-    admin/        api/actions.ts
-    content/      model/ (FAQ, policy drafts), components/FaqList
-  shared/
-    ui/           Design-system primitives, ActionForm, Flash toast, book media
-    api/          Session/auth, server-action runner (error mapping), problem+json helpers, geo
-    lib/          Framework-free helpers (countries, vocabularies, ISBN, formatting)
-  server/       Backend. No React or Next.js imports (enforced)
-    db.ts, clock.ts, config.ts, rbac.ts, rate-limit.ts, http.ts (outbound client), cache.ts
-    domain/       credits, listings, routes, users, support, catalog, files, analytics, audit, notifications, announcements
-      exchanges/    core (state machine), request, response, shipping, completion, disputes, staff, conversation, jobs, queries
-    queries/      read models for pages: admin, member, site
-    jobs/         runner (locks, dead letters, health), email (outbox delivery), types
-db/migrations/  SQL schema
-scripts/        migrate, seed, jobs, check-bundle
-tests/          Vitest suites against a real PostgreSQL database
+  app/        pages and layouts
+  features/   one folder per feature (accounts, listings, exchanges, support, admin, content)
+  shared/     UI primitives, session helpers and small utilities
+  server/     business rules, database queries and background jobs
+db/           SQL migrations
+docs/         architecture notes, OpenAPI spec, screenshots
+scripts/      migrate, seed, jobs and the bundle budget check
+tests/        integration tests
 ```
 
-`npm run lint` checks formatting (Prettier), types and the import rules, including that only `src/server` imports the database client. `bundle-budget.json` sets a brotli budget for each route's client JavaScript, and `npm run bundle:check` fails the build when a route exceeds it. CI (`.github/workflows/ci.yml`) runs lint, tests against PostgreSQL, the build and the bundle budget.
+[`docs/architecture.md`](docs/architecture.md) covers the design in depth: how credits stay consistent, the exchange state machine, shipping routes, background jobs, the HTTP API and the security model.
 
-### Credit integrity (§9, §18.5)
+## Running in production
 
-- `credit_ledger` is the source of truth. A database trigger rejects every `UPDATE` and `DELETE` on it. Each row stores the event type, the deltas for available and reserved credits, the reason, the actor, the related exchange, and a unique idempotency key.
-- `credit_accounts` is a summary that is updated in the same transaction while the row is locked. `CHECK (available >= 0 AND reserved >= 0)` makes a double spend impossible, even if application code has a bug.
-- Ledger idempotency keys are derived from the exchange (`reserve:<id>`, `earn:<id>`, …). As a result, a sender earns a credit **exactly once per exchange**.
-- Each request locks the listing row, so two concurrent requests can't take the same copy. A partial unique index (`exchanges_one_live_per_listing`) enforces the same rule a second time at the database level.
-- Settlement locks both wallets in a fixed order to avoid deadlocks. Transactions retry on serialization failures.
-- `reconcile()` compares every wallet with its ledger. The admin credit page and the CSV export show the result.
+The app runs anywhere Node.js and PostgreSQL do. On top of `npm run build && npm start` you'll want to:
 
-| Event | available | reserved | When |
-|---|---|---|---|
-| `credit_reserved` | −1 | +1 | Request submitted |
-| `credit_released` | +1 | −1 | Declined / expired / cancelled / sender missed dispatch |
-| `credit_spent` | 0 | −1 | Exchange completed (requester) |
-| `credit_earned` | +1 | 0 | Exchange completed (sender) |
-| `credit_refunded` | +1 | −1 | Dispute resolved for the requester |
-| `credit_admin_adjustment` | ±n | 0 | Staff correction (reason + audit log required) |
-| `credit_reversed` | −Δ | −Δ | Reverses an earned credit or an adjustment |
+1. **Schedule the jobs.** Call `POST /api/v1/jobs` with the `x-jobs-secret` header every few minutes, or run `npm run jobs` from cron. This expires unanswered requests, cancels missed dispatches, completes exchanges and sends email.
+2. **Connect an email provider.** The default sender only logs. Implement the `EmailTransport` interface in [`src/server/jobs/email.ts`](src/server/jobs/email.ts).
+3. **Use object storage** for uploads instead of the local `UPLOAD_DIR`, and add a malware scanner to the hook in [`src/server/domain/files.ts`](src/server/domain/files.ts).
+4. **Monitor `GET /api/v1/health`.** It returns 503 when the database is down or background work is falling behind.
+5. **Set `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`** to the same value on every server if you run more than one, and move rate limiting to a shared store.
 
-### Exchange lifecycle (§10)
+## Status and roadmap
 
-```
-requested ──accept──▶ accepted ──ship──▶ shipped ──recipient confirms "as described"──▶ completed
-   │  │                  │                  │  └─(tracked & delivery window passed / staff)─▶ delivered ──(3-day window)──▶ completed
-   │  └─decline/expire   └─sender cancels / misses dispatch (credit released)   └──────── dispute ────────┐
-   └─requester cancels                                                         disputed ──▶ completed | refunded
-```
+This is the first version: the complete exchange loop, the admin tools and the policy pages. It's ready for a closed beta, with these gaps:
 
-The server validates every transition against the table in `src/server/domain/exchanges/core.ts`. Members can't mark a parcel as carrier-delivered. Only the recipient's own confirmation, a staff action, or the auto-confirm rule for tracked parcels can move an exchange to delivered.
+- Email delivery, object storage and malware scanning need wiring to real services (see above)
+- The policy pages are drafts and need legal review in each market
+- Not built yet: a premium membership and payments, carrier tracking and shipping labels, more languages, recommendations, a referral program, and a community blog
 
-### Countries and routes (§4)
+## Contributing
 
-Every ISO country is seeded. Exchanges are **open** in GB, IE, US and CA, and in **limited** preview in AU and NZ. Every other country starts on the **waitlist**. A route is an explicit origin→destination row that has its own settings for tracking, delivery estimate, customs notice, weight limit, risk level and indicative postage. GB↔US is seeded but disabled, so you can see how an unsupported route is labelled. A cross-border route can't be enabled until it has a customs position. Country detection reads common CDN geo headers and falls back to `Accept-Language`. It is only a suggestion, and visitors can always change it.
+1. Create a branch from `main`.
+2. Make your change, following the conventions in [`CLAUDE.md`](CLAUDE.md): where code goes, what may import what, and how credits and staff actions are handled.
+3. Run `npm run check` and make sure it passes.
+4. Open a pull request. CI runs the same checks against PostgreSQL.
 
-### Privacy and security
-
-- Passwords are hashed with scrypt. Sessions are random tokens stored as SHA-256 hashes in an httpOnly, SameSite=Lax cookie.
-- Server Actions get Next.js's origin check, and every action also re-checks authentication and authorization.
-- Addresses are private. A sender sees an address snapshot only after accepting the request. Snapshots are redacted 60 days after the exchange closes.
-- Uploads are type-checked by their content (magic bytes), not their file name, and limited to 5 MB. They're served with `nosniff` and a sandbox CSP. Proof of postage and dispute evidence are visible only to the two members in the exchange and to staff.
-- Staff have role-based permissions (`src/server/rbac.ts`). Every sensitive staff action requires a reason and is written to the append-only `admin_audit_logs`.
-- Members can download their data (`/api/v1/me/export`) and close their account, which anonymizes it while keeping the ledger.
-- Rate limits apply to sign-in, registration, requests, listings, messages, reports and tickets.
-
-## Blueprint acceptance checklist (Appendix A)
-
-| Requirement | Where |
-|---|---|
-| Visitor can choose or correct their country; IP is only a suggestion | Country banner in `app/layout.tsx`, `lib/geo.ts`, profile settings |
-| Unsupported routes can't complete a request | `routes.checkEligibility`, test *blocks unsupported routes* |
-| Register + verify email | `/signup`, `/verify-email`, test *registers, verifies…* |
-| Create, edit, pause and remove listings; format, language, condition and photos required | `/my/books/*`, `listings.publishListing` |
-| Search and filter | `/explore`, `listings.searchListings` |
-| No request without credits; no double spend; no double reservation | Tests in `tests/exchanges.test.ts` |
-| Declined or expired request releases the credit | Tests *ending a request before shipment…* |
-| Sender can accept, decline, dispatch and enter tracking | `/exchanges/[id]` |
-| No credit for creating a listing; credit awarded once | Test *awards the sender's credit only once* |
-| Dispute pauses completion | Test *pauses the normal completion path* |
-| Admin adjustments require a reason and an audit record | `credits.adminAdjust`, tests in `tests/credits.test.ts` |
-| Addresses visible only for fulfilment | Test *hides the delivery address…* |
-| Report listings and members; support cases | `ReportForm`, `/support`, `/admin/reports` |
-| Essential notifications | `domain/notifications.ts` (in-site + email outbox; essential types can't be switched off) |
-| Admins can disable a country or route | `/admin/countries`, test *lets admins disable a route* |
-| Policies published | `/legal/*` (drafts marked as pending legal review) |
-| Mobile and desktop | Responsive CSS; no horizontal overflow on phone widths |
-
-## Not in this MVP (by design or still to do)
-
-- **Premium (YOS Plus) and payments.** These are blueprint Phase 2. The data model has `users.plan` and plan-based listing limits.
-- **Carrier APIs, label purchase and live rate quotes.** Postage figures are admin-entered *indicative* estimates and are labelled that way.
-- **Email provider.** The default `EmailTransport` in `src/server/jobs/email.ts` logs to the console. Implement that interface for a transactional email provider; every send passes an idempotency key the provider can use to deduplicate.
-- **Malware scanning.** `files.scan()` is a hook that currently accepts every file.
-- **Object storage.** Uploads go to `UPLOAD_DIR` on local disk. Use object storage in production.
-- **Shared rate limiting.** The limiter is in memory, which only works on a single instance. Move it to Redis or Postgres when running several instances.
-- **More languages.** The launch language is English. The data model and formatting (`Intl`) are ready for localization.
-- **Legal review.** Every policy page is a draft pending review by counsel in each market (§20).
+This repository doesn't have a license yet, so all rights are reserved by the owner.

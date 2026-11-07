@@ -6,6 +6,7 @@ import { can } from "@/server/rbac";
 import { jobHealth } from "@/server/jobs/runner";
 import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
 import { runJobsAction } from "@/features/admin/api/actions";
+import { formatHours } from "@/shared/lib/format";
 
 export default async function AdminOverview() {
   const u = await requirePermission("staff.access");
@@ -54,7 +55,7 @@ export default async function AdminOverview() {
           {tile(o.active_listings, "Active listings", "/admin/listings")}
           {tile(o.requests_30d, "Requests (30 days)")}
           {tile(o.completed_30d, "Completed exchanges (30 days)", "/admin/analytics", true)}
-          {tile(o.avg_dispatch_hours ? `${(o.avg_dispatch_hours / 24).toFixed(1)}d` : "—", "Avg. time to dispatch")}
+          {tile(formatHours(o.avg_dispatch_hours || null), "Avg. time to dispatch")}
         </div>
       </section>
       <section>

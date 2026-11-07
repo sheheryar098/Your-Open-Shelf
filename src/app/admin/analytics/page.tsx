@@ -1,12 +1,11 @@
 import { requirePermission } from "@/shared/api/session";
 import { kpis } from "@/server/domain/analytics";
 import { countryName } from "@/shared/lib/countries";
+import { formatHours } from "@/shared/lib/format";
 
 export const metadata = { title: "Analytics" };
 
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : "—");
-const hours = (h: number | null | undefined) =>
-  h == null || !Number.isFinite(h) ? "—" : h >= 48 ? `${(h / 24).toFixed(1)} days` : `${Math.round(h)} h`;
 
 export default async function Analytics() {
   await requirePermission("analytics.view");
@@ -69,11 +68,11 @@ export default async function Analytics() {
             <div className="k">Dispute rate (of shipped)</div>
           </div>
           <div className="stat">
-            <div className="v">{hours(f.median_dispatch_hours)}</div>
+            <div className="v">{formatHours(f.median_dispatch_hours)}</div>
             <div className="k">Median acceptance → dispatch</div>
           </div>
           <div className="stat">
-            <div className="v">{hours(k.medianListingToRequestHours)}</div>
+            <div className="v">{formatHours(k.medianListingToRequestHours)}</div>
             <div className="k">Median listing → first request</div>
           </div>
           <div className="stat">
@@ -103,7 +102,7 @@ export default async function Analytics() {
             <div className="k">Reports (90d)</div>
           </div>
           <div className="stat">
-            <div className="v">{hours(k.trust.avg_resolution_hours || null)}</div>
+            <div className="v">{formatHours(k.trust.avg_resolution_hours || null)}</div>
             <div className="k">Avg. dispute resolution</div>
           </div>
           <div className="stat">

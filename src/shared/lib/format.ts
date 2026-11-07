@@ -39,3 +39,9 @@ export function shortId(id: string) {
 export function authorsText(a: string[] | null | undefined) {
   return (a ?? []).join(", ");
 }
+
+/** "6 h" under two days, "3.5 days" above. Returns a dash when there's no value yet. */
+export function formatHours(h: number | null | undefined): string {
+  if (h == null || !Number.isFinite(h)) return "—";
+  return h >= 48 ? `${(h / 24).toFixed(1)} days` : `${Math.max(1, Math.round(h))} h`;
+}
