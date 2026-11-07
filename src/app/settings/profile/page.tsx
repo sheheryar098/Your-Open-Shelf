@@ -14,19 +14,43 @@ export default async function ProfileSettings() {
   const u = await requireUser("/settings/profile");
   return (
     <section className="card">
-      <div className="card-header"><h2>Profile</h2><Link href={`/members/${u.id}`} className="small">View public profile</Link></div>
+      <div className="card-header">
+        <h2>Profile</h2>
+        <Link href={`/members/${u.id}`} className="small">
+          View public profile
+        </Link>
+      </div>
       <ActionForm action={profileAction} encType="multipart/form-data">
         <div className="field">
           <label htmlFor="displayName">Display name</label>
-          <input id="displayName" name="displayName" type="text" required minLength={2} maxLength={40} defaultValue={u.display_name} />
+          <input
+            id="displayName"
+            name="displayName"
+            type="text"
+            required
+            minLength={2}
+            maxLength={40}
+            defaultValue={u.display_name}
+          />
         </div>
         <div className="field">
           <label htmlFor="bio">Short bio (optional)</label>
-          <textarea id="bio" name="bio" maxLength={500} rows={3} defaultValue={u.bio ?? ""} placeholder="What do you like to read?" />
+          <textarea
+            id="bio"
+            name="bio"
+            maxLength={500}
+            rows={3}
+            defaultValue={u.bio ?? ""}
+            placeholder="What do you like to read?"
+          />
         </div>
         <div className="field">
           <label htmlFor="avatar">Profile photo (optional)</label>
-          {u.avatar_file_id && <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden" }}><Photo fileId={u.avatar_file_id} alt="Your profile photo" /></div>}
+          {u.avatar_file_id && (
+            <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden" }}>
+              <Photo fileId={u.avatar_file_id} alt="Your profile photo" />
+            </div>
+          )}
           <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" />
         </div>
         <div className="field-row">
@@ -46,7 +70,11 @@ export default async function ProfileSettings() {
             <label htmlFor="timezone">Time zone</label>
             <select id="timezone" name="timezone" defaultValue={u.timezone}>
               <option value="UTC">UTC</option>
-              {ZONES.map((z) => <option key={z} value={z}>{z}</option>)}
+              {ZONES.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
             </select>
           </div>
         </div>

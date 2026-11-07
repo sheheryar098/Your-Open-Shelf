@@ -15,15 +15,35 @@ export default async function NotificationSettings() {
       <ActionForm action={notificationPrefsAction}>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Notification</th><th>On YOS</th><th>Email</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Notification</th>
+                <th>On YOS</th>
+                <th>Email</th>
+              </tr>
+            </thead>
             <tbody>
               {optional.map(([k, m]) => {
                 const p = u.notification_prefs[k] ?? {};
                 return (
                   <tr key={k}>
                     <td>{m.label}</td>
-                    <td><input type="checkbox" name={`${k}.inSite`} defaultChecked={p.inSite !== false} aria-label={`${m.label} on YOS`} /></td>
-                    <td><input type="checkbox" name={`${k}.email`} defaultChecked={p.email === true} aria-label={`${m.label} by email`} /></td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        name={`${k}.inSite`}
+                        defaultChecked={p.inSite !== false}
+                        aria-label={`${m.label} on YOS`}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        name={`${k}.email`}
+                        defaultChecked={p.email === true}
+                        aria-label={`${m.label} by email`}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -33,7 +53,8 @@ export default async function NotificationSettings() {
         <SubmitButton>Save preferences</SubmitButton>
       </ActionForm>
       <p className="small muted" style={{ marginTop: 16 }}>
-        Always sent (needed to complete exchanges and keep your account safe): {essential.map(([, m]) => m.label.toLowerCase()).join("; ")}.
+        Always sent (needed to complete exchanges and keep your account safe):{" "}
+        {essential.map(([, m]) => m.label.toLowerCase()).join("; ")}.
       </p>
     </section>
   );

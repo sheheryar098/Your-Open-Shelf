@@ -49,18 +49,32 @@ export function Empty({ children }: { children: React.ReactNode }) {
   return <div className="empty">{children}</div>;
 }
 
-/** Cursor pagination control (api-design skill: cursor-based for data that mutates). */
+/** "Show more" links for cursor-paginated lists. */
 export function CursorPager({ nextHref, firstHref }: { nextHref: string | null; firstHref: string | null }) {
   if (!nextHref && !firstHref) return null;
   return (
     <nav className="pager" aria-label="Pagination">
-      {firstHref && <Link className="btn btn-sm" href={firstHref}>← Back to start</Link>}
-      {nextHref && <Link className="btn btn-sm" href={nextHref}>Show more →</Link>}
+      {firstHref && (
+        <Link className="btn btn-sm" href={firstHref}>
+          ← Back to start
+        </Link>
+      )}
+      {nextHref && (
+        <Link className="btn btn-sm" href={nextHref}>
+          Show more →
+        </Link>
+      )}
     </nav>
   );
 }
 
-export function Tabs({ items, current }: { items: { href: string; label: React.ReactNode; key: string }[]; current: string }) {
+export function Tabs({
+  items,
+  current,
+}: {
+  items: { href: string; label: React.ReactNode; key: string }[];
+  current: string;
+}) {
   return (
     <nav className="tabs" aria-label="Sections">
       {items.map((i) => (

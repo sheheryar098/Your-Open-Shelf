@@ -26,7 +26,10 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
 }
 
 export class RateLimitedError extends DomainError {
-  constructor(message: string, public retryAfter: number) {
+  constructor(
+    message: string,
+    public retryAfter: number,
+  ) {
     super(message, "rate_limited");
   }
 }

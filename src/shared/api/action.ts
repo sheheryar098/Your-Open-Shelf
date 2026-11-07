@@ -38,7 +38,9 @@ export function bool(fd: FormData, name: string): boolean {
 }
 
 export function files(fd: FormData, name: string): File[] {
-  return fd.getAll(name).filter((v): v is File => typeof v === "object" && v !== null && "arrayBuffer" in v && (v as File).size > 0);
+  return fd
+    .getAll(name)
+    .filter((v): v is File => typeof v === "object" && v !== null && "arrayBuffer" in v && (v as File).size > 0);
 }
 
 export function file(fd: FormData, name: string): File | null {

@@ -4,16 +4,18 @@ import { randomUUID } from "node:crypto";
 import { bool, run, str, type ActionState } from "@/shared/api/action";
 import { DomainError } from "@/server/errors";
 import { actionStaff } from "@/shared/api/session";
-import { pool, query, tx } from "@/server/db";
 import { isCountryCode } from "@/shared/lib/countries";
 import { adminAdjust, reverseEntry } from "@/server/domain/credits";
 import { setAccountStatus, setRestrictions, setRole } from "@/server/domain/users";
 import { moderateListing } from "@/server/domain/listings";
-import { updateBookMetadata } from "@/server/domain/catalog";
-import { extendDeadline, markDeliveredByStaff, resolveDispute, staffCancel } from "@/server/domain/exchanges";
+import { correctCatalogRecord } from "@/server/domain/catalog";
+import { createAnnouncement, setAnnouncementActive } from "@/server/domain/announcements";
+import { extendDeadline, staffCancel } from "@/server/domain/exchanges/staff";
+import { markDeliveredByStaff } from "@/server/domain/exchanges/completion";
+import { resolveDispute } from "@/server/domain/exchanges/disputes";
 import { handleReport, hideMessage, hideReview } from "@/server/domain/support";
 import { getRoute, updateCountry, upsertRoute, type ShippingRoute } from "@/server/domain/routes";
-import { audit, requireReason } from "@/server/domain/audit";
+import { requireReason } from "@/server/domain/audit";
 import { requeueDeadEmail, resolveParkedItem, runJobs } from "@/server/jobs/runner";
 
 export async function adjustCreditsAction(userId: string, _: ActionState, fd: FormData) {
@@ -21,7 +23,10 @@ export async function adjustCreditsAction(userId: string, _: ActionState, fd: Fo
     const admin = await actionStaff("credits.adjust");
     const amount = Number(str(fd, "amount"));
     await adminAdjust({
-      adminId: admin.id, userId, amount, reason: str(fd, "reason"),
+      adminId: admin.id,
+      userId,
+      amount,
+      reason: str(fd, "reason"),
       idempotencyKey: str(fd, "idempotencyKey") || randomUUID(),
       exchangeId: str(fd, "exchangeId") || null,
     });
@@ -40,12 +45,22 @@ export async function reverseLedgerAction(ledgerId: string, _: ActionState, fd: 
 export async function restrictMemberAction(userId: string, _: ActionState, fd: FormData) {
   return run(async () => {
     const staff = await actionStaff("members.restrict");
-    await setRestrictions(staff.id, userId, { canList: bool(fd, "canList"), canRequest: bool(fd, "canRequest") }, str(fd, "reason"));
+    await setRestrictions(
+      staff.id,
+      userId,
+      { canList: bool(fd, "canList"), canRequest: bool(fd, "canRequest") },
+      str(fd, "reason"),
+    );
     return "Restrictions updated.";
   });
 }
 
-export async function accountStatusAction(userId: string, status: "active" | "suspended", _: ActionState, fd: FormData) {
+export async function accountStatusAction(
+  userId: string,
+  status: "active" | "suspended",
+  _: ActionState,
+  fd: FormData,
+) {
   return run(async () => {
     const staff = await actionStaff("members.suspend");
     await setAccountStatus(staff.id, userId, status, str(fd, "reason"));
@@ -76,18 +91,22 @@ export async function moderateListingAction(listingId: string, _: ActionState, f
 export async function editBookAction(bookId: string, _: ActionState, fd: FormData) {
   return run(async () => {
     const staff = await actionStaff("listings.moderate");
-    const reason = requireReason(str(fd, "reason"));
-    await tx(async (c) => {
-      await updateBookMetadata(c, bookId, {
+    await correctCatalogRecord(
+      staff.id,
+      bookId,
+      {
         isbn: str(fd, "isbn") || null,
         title: str(fd, "title"),
-        authors: str(fd, "authors").split(/[,;]/).map((a) => a.trim()).filter(Boolean),
+        authors: str(fd, "authors")
+          .split(/[,;]/)
+          .map((a) => a.trim())
+          .filter(Boolean),
         publisher: str(fd, "publisher") || null,
         publicationYear: Number(str(fd, "year")) || null,
         edition: str(fd, "edition") || null,
-      });
-      await audit(c, { actorId: staff.id, action: "catalog.edit", targetType: "book", targetId: bookId, reason });
-    });
+      },
+      str(fd, "reason"),
+    );
     return "Catalog record corrected.";
   });
 }
@@ -108,8 +127,10 @@ export async function exchangeInterventionAction(exchangeId: string, _: ActionSt
     const op = str(fd, "op");
     const reason = str(fd, "reason");
     if (op === "cancel") await staffCancel(staff.id, staff.role, exchangeId, reason);
-    else if (op === "delivered_carrier") await markDeliveredByStaff(staff.id, staff.role, exchangeId, "carrier", reason);
-    else if (op === "delivered_support") await markDeliveredByStaff(staff.id, staff.role, exchangeId, "support", reason);
+    else if (op === "delivered_carrier")
+      await markDeliveredByStaff(staff.id, staff.role, exchangeId, "carrier", reason);
+    else if (op === "delivered_support")
+      await markDeliveredByStaff(staff.id, staff.role, exchangeId, "support", reason);
     else if (op === "extend") await extendDeadline(staff.id, staff.role, exchangeId, Number(str(fd, "days")), reason);
     else throw new DomainError("Choose an action.");
     return "Done.";
@@ -138,12 +159,17 @@ export async function countryAction(code: string, _: ActionState, fd: FormData) 
     const admin = await actionStaff("routes.manage");
     const status = str(fd, "status");
     if (!["open", "limited", "waitlist", "unavailable"].includes(status)) throw new DomainError("Choose a status.");
-    await updateCountry(admin.id, code, {
-      status: status as "open",
-      status_note: str(fd, "statusNote") || null,
-      prohibited_items_notice: str(fd, "prohibited") || null,
-      currency: str(fd, "currency").toUpperCase() || null,
-    }, str(fd, "reason"));
+    await updateCountry(
+      admin.id,
+      code,
+      {
+        status: status as "open",
+        status_note: str(fd, "statusNote") || null,
+        prohibited_items_notice: str(fd, "prohibited") || null,
+        currency: str(fd, "currency").toUpperCase() || null,
+      },
+      str(fd, "reason"),
+    );
     return "Country updated.";
   });
 }
@@ -183,15 +209,7 @@ export async function routeAction(_: ActionState, fd: FormData) {
 export async function announcementAction(_: ActionState, fd: FormData) {
   return run(async () => {
     const admin = await actionStaff("content.manage");
-    const message = str(fd, "message").trim();
-    if (message.length < 5) throw new DomainError("Write the announcement.");
-    await tx(async (c) => {
-      const r = await c.query<{ id: string }>(
-        "INSERT INTO announcements (message, level, created_by) VALUES ($1, $2, $3) RETURNING id",
-        [message.slice(0, 500), str(fd, "level") === "warning" ? "warning" : "info", admin.id],
-      );
-      await audit(c, { actorId: admin.id, action: "announcement.create", targetType: "announcement", targetId: r.rows[0].id });
-    });
+    await createAnnouncement(admin.id, str(fd, "message"), str(fd, "level") === "warning" ? "warning" : "info");
     return "Announcement published.";
   });
 }
@@ -199,8 +217,7 @@ export async function announcementAction(_: ActionState, fd: FormData) {
 export async function toggleAnnouncementAction(id: string, active: boolean, _: ActionState) {
   return run(async () => {
     const admin = await actionStaff("content.manage");
-    await query("UPDATE announcements SET active = $2 WHERE id = $1", [id, active]);
-    await audit(pool(), { actorId: admin.id, action: active ? "announcement.activate" : "announcement.deactivate", targetType: "announcement", targetId: id });
+    await setAnnouncementActive(admin.id, id, active);
     return active ? "Announcement shown." : "Announcement hidden.";
   });
 }
@@ -219,8 +236,7 @@ export async function parkedItemAction(id: string, action: "retry" | "dismiss", 
   return run(async () => {
     const staff = await actionStaff("exchanges.intervene");
     const note = action === "dismiss" ? requireReason(str(fd, "note")) : "retry requested";
-    await resolveParkedItem(id, action, note);
-    await audit(pool(), { actorId: staff.id, action: `job.${action}`, targetType: "job_failure", targetId: id, reason: note });
+    await resolveParkedItem(staff.id, id, action, note);
     return action === "retry" ? "The item will be retried on the next run." : "Marked as handled.";
   });
 }
@@ -228,8 +244,7 @@ export async function parkedItemAction(id: string, action: "retry" | "dismiss", 
 export async function requeueEmailAction(id: string, _: ActionState) {
   return run(async () => {
     const staff = await actionStaff("exchanges.intervene");
-    await requeueDeadEmail(id);
-    await audit(pool(), { actorId: staff.id, action: "email.requeue", targetType: "email", targetId: id });
+    await requeueDeadEmail(staff.id, id);
     return "Email re-queued.";
   });
 }

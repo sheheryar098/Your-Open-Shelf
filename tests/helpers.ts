@@ -13,31 +13,62 @@ let passwordHash: string | null = null;
 
 export async function resetData() {
   setNow(null);
-  await pool().query(`TRUNCATE users, sessions, email_tokens, files, addresses, books, listings, listing_photos, exchanges,
+  await pool()
+    .query(`TRUNCATE users, sessions, email_tokens, files, addresses, books, listings, listing_photos, exchanges,
     exchange_addresses, exchange_events, shipments, messages, credit_accounts, credit_ledger, wishlist_items, reviews,
     notifications, email_outbox, disputes, dispute_messages, reports, support_tickets, ticket_messages, admin_audit_logs,
     announcements, job_runs, job_failures, cache_entries, cache_metrics, shipping_routes, countries CASCADE`);
   await seedReferenceData(pool());
 }
 
-export async function makeUser(opts: { country?: string; role?: string; credits?: number; scope?: "domestic" | "international"; verified?: boolean; name?: string } = {}) {
+export async function makeUser(
+  opts: {
+    country?: string;
+    role?: string;
+    credits?: number;
+    scope?: "domestic" | "international";
+    verified?: boolean;
+    name?: string;
+  } = {},
+) {
   passwordHash ??= await hashPassword("test-password-123");
   const country = opts.country ?? "GB";
   const r = await pool().query<{ id: string }>(
     `INSERT INTO users (email, password_hash, display_name, role, country_code, email_verified_at, ship_scope)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [`${randomUUID()}@test.yos`, passwordHash, opts.name ?? "Tester", opts.role ?? "member", country,
-      opts.verified === false ? null : new Date(), opts.scope ?? "domestic"],
+    [
+      `${randomUUID()}@test.yos`,
+      passwordHash,
+      opts.name ?? "Tester",
+      opts.role ?? "member",
+      country,
+      opts.verified === false ? null : new Date(),
+      opts.scope ?? "domestic",
+    ],
   );
   const id = r.rows[0].id;
   await pool().query("INSERT INTO credit_accounts (user_id) VALUES ($1)", [id]);
   const addressId = await saveAddress(id, {
-    label: "", recipientName: "Test Person", line1: "1 Test Street", line2: "", city: "Testville",
-    region: country === "US" || country === "CA" ? "XX" : "", postalCode: "T1 1TT", country, phone: "", isDefault: true,
+    label: "",
+    recipientName: "Test Person",
+    line1: "1 Test Street",
+    line2: "",
+    city: "Testville",
+    region: country === "US" || country === "CA" ? "XX" : "",
+    postalCode: "T1 1TT",
+    country,
+    phone: "",
+    isDefault: true,
   });
   if (opts.credits) {
     const admin = await adminUser();
-    await adminAdjust({ adminId: admin, userId: id, amount: opts.credits, reason: "Test starting balance", idempotencyKey: randomUUID() });
+    await adminAdjust({
+      adminId: admin,
+      userId: id,
+      amount: opts.credits,
+      reason: "Test starting balance",
+      idempotencyKey: randomUUID(),
+    });
   }
   return { id, addressId };
 }
@@ -54,13 +85,23 @@ export async function adminUser() {
   return r.rows[0].id;
 }
 
-export async function makeListing(ownerId: string, opts: { title?: string; scope?: "domestic" | "international"; shipCountries?: string[] } = {}) {
+export async function makeListing(
+  ownerId: string,
+  opts: { title?: string; scope?: "domestic" | "international"; shipCountries?: string[] } = {},
+) {
   const id = await createListing(
     ownerId,
     { input: { title: opts.title ?? `Book ${randomUUID().slice(0, 6)}`, authors: ["Test Author"] } },
     {
-      format: "paperback", language: "en", condition: "good", conditionNotes: "Normal wear, no markings.", editionNotes: "",
-      categoryId: null, weightGrams: 300, shipScope: opts.scope ?? "domestic", shipCountries: opts.shipCountries ?? [],
+      format: "paperback",
+      language: "en",
+      condition: "good",
+      conditionNotes: "Normal wear, no markings.",
+      editionNotes: "",
+      categoryId: null,
+      weightGrams: 300,
+      shipScope: opts.scope ?? "domestic",
+      shipCountries: opts.shipCountries ?? [],
     },
   );
   await tx(async (c) => {
@@ -72,7 +113,10 @@ export async function makeListing(ownerId: string, opts: { title?: string; scope
 }
 
 export async function balance(userId: string) {
-  const r = await pool().query<{ available: number; reserved: number }>("SELECT available, reserved FROM credit_accounts WHERE user_id = $1", [userId]);
+  const r = await pool().query<{ available: number; reserved: number }>(
+    "SELECT available, reserved FROM credit_accounts WHERE user_id = $1",
+    [userId],
+  );
   return r.rows[0];
 }
 

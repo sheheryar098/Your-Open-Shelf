@@ -18,9 +18,11 @@ export default async function PolicyPage({ params }: { params: Promise<{ slug: s
   if (!doc) notFound();
   return (
     <div className="container narrow page prose">
-      <p className="small"><Link href="/legal">← All policies</Link></p>
+      <p className="small">
+        <Link href="/legal">← All policies</Link>
+      </p>
       <h1>{doc.title}</h1>
-      <p className="small muted">Version {policy.termsVersion} · Draft pending legal review — not legal advice.</p>
+      <p className="small muted">Version {policy.termsVersion} · Draft pending legal review. Not legal advice.</p>
       {doc.body}
     </div>
   );

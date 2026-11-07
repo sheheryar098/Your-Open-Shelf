@@ -20,21 +20,39 @@ export default function Help() {
         <aside className="stack">
           <div className="card">
             <h3>Need a hand?</h3>
-            <p className="small">For a problem with a specific exchange, open it from the exchange page so the details come with it.</p>
+            <p className="small">
+              For a problem with a specific exchange, open it from the exchange page so the details come with it.
+            </p>
             <div className="stack-sm">
-              <Link href="/support/new" className="btn btn-primary btn-block">Open a support ticket</Link>
-              <Link href="/contact" className="btn btn-block">Contact us without an account</Link>
+              <Link href="/support/new" className="btn btn-primary btn-block">
+                Open a support ticket
+              </Link>
+              <Link href="/contact" className="btn btn-block">
+                Contact us without an account
+              </Link>
             </div>
-            <p className="tiny muted" style={{ marginTop: 12 }}>We aim to acknowledge standard tickets within 1 business day.</p>
+            <p className="tiny muted" style={{ marginTop: 12 }}>
+              We aim to acknowledge standard tickets within 1 business day.
+            </p>
           </div>
           <div className="card card-flat">
             <h3>Guides</h3>
             <ul className="small">
-              <li><Link href="/how-it-works">How YOS works</Link></li>
-              <li><Link href="/credits">The credit system</Link></li>
-              <li><Link href="/condition-guide">Book condition &amp; packing</Link></li>
-              <li><Link href="/shipping">Countries, shipping &amp; customs</Link></li>
-              <li><Link href="/trust-safety">Trust, safety &amp; disputes</Link></li>
+              <li>
+                <Link href="/how-it-works">How YOS works</Link>
+              </li>
+              <li>
+                <Link href="/credits">The credit system</Link>
+              </li>
+              <li>
+                <Link href="/condition-guide">Book condition &amp; packing</Link>
+              </li>
+              <li>
+                <Link href="/shipping">Countries, shipping &amp; customs</Link>
+              </li>
+              <li>
+                <Link href="/trust-safety">Trust, safety &amp; disputes</Link>
+              </li>
             </ul>
           </div>
         </aside>

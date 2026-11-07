@@ -4,16 +4,28 @@ import { redirect } from "next/navigation";
 import { bool, file, run, str, type ActionState } from "@/shared/api/action";
 import { enforceRateLimit } from "@/server/rate-limit";
 import { actionUser } from "@/shared/api/session";
-import {
-  acceptRequest, addDisputeMessage, cancelRequest, confirmReceipt, declineRequest, leaveReview, markShipped,
-  openDispute, postMessage, requestBook, senderCancel, withdrawDispute,
-} from "@/server/domain/exchanges";
+import { acceptRequest, cancelRequest, declineRequest, senderCancel } from "@/server/domain/exchanges/response";
+import { addDisputeMessage, openDispute, withdrawDispute } from "@/server/domain/exchanges/disputes";
+import { confirmReceipt } from "@/server/domain/exchanges/completion";
+import { leaveReview, postMessage } from "@/server/domain/exchanges/conversation";
+import { markShipped } from "@/server/domain/exchanges/shipping";
+import { requestBook } from "@/server/domain/exchanges/request";
 
 export async function requestBookAction(listingId: string, _: ActionState, fd: FormData) {
   return run(async () => {
     const u = await actionUser();
-    enforceRateLimit(`request:${u.id}`, 15, 60 * 60_000, "You've made a lot of requests recently. Please try again later.");
-    const id = await requestBook({ requesterId: u.id, listingId, addressId: str(fd, "addressId"), requestKey: str(fd, "requestKey") });
+    enforceRateLimit(
+      `request:${u.id}`,
+      15,
+      60 * 60_000,
+      "You've made a lot of requests recently. Please try again later.",
+    );
+    const id = await requestBook({
+      requesterId: u.id,
+      listingId,
+      addressId: str(fd, "addressId"),
+      requestKey: str(fd, "requestKey"),
+    });
     redirect(`/exchanges/${id}?requested=1`);
   });
 }
@@ -22,7 +34,7 @@ export async function acceptAction(id: string, _: ActionState) {
   return run(async () => {
     const u = await actionUser();
     await acceptRequest(u.id, id);
-    return "Request accepted. The delivery address is now shown below — please dispatch within the deadline.";
+    return "Request accepted. The delivery address is now shown below, please dispatch within the deadline.";
   });
 }
 
@@ -76,7 +88,11 @@ export async function openDisputeAction(id: string, _: ActionState, fd: FormData
   return run(async () => {
     const u = await actionUser();
     enforceRateLimit(`dispute:${u.id}`, 5, 24 * 60 * 60_000);
-    const d = await openDispute(u.id, id, { issueType: str(fd, "issueType"), description: str(fd, "description"), evidence: file(fd, "evidence") });
+    const d = await openDispute(u.id, id, {
+      issueType: str(fd, "issueType"),
+      description: str(fd, "description"),
+      evidence: file(fd, "evidence"),
+    });
     redirect(`/disputes/${d}`);
   });
 }

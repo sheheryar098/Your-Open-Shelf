@@ -9,9 +9,14 @@ import { clientIp, currentUser, endSession, startSession } from "@/shared/api/se
 import { COUNTRY_COOKIE } from "@/shared/api/geo";
 import { isCountryCode } from "@/shared/lib/countries";
 import {
-  authenticate, registerSchema, registerUser, requestPasswordReset, resendVerification, resetPassword,
+  authenticate,
+  registerSchema,
+  registerUser,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
+  setCountryIfMissing,
 } from "@/server/domain/users";
-import { query } from "@/server/db";
 
 function safeNext(next: string) {
   return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
@@ -31,7 +36,11 @@ export async function registerAction(_: ActionState, fd: FormData) {
     if (!parsed.success) throw new DomainError(parsed.error.issues[0].message);
     const id = await registerUser(parsed.data);
     await startSession(id);
-    (await cookies()).set(COUNTRY_COOKIE, parsed.data.country.toUpperCase(), { path: "/", maxAge: 365 * 86400, sameSite: "lax" });
+    (await cookies()).set(COUNTRY_COOKIE, parsed.data.country.toUpperCase(), {
+      path: "/",
+      maxAge: 365 * 86400,
+      sameSite: "lax",
+    });
     redirect("/welcome");
   });
 }
@@ -40,7 +49,12 @@ export async function signInAction(_: ActionState, fd: FormData) {
   return run(async () => {
     const email = str(fd, "email");
     enforceRateLimit(`signin:${await clientIp()}`, 20, 15 * 60_000);
-    enforceRateLimit(`signin:${email.toLowerCase()}`, 8, 15 * 60_000, "Too many sign-in attempts for this account. Try again in 15 minutes or reset your password.");
+    enforceRateLimit(
+      `signin:${email.toLowerCase()}`,
+      8,
+      15 * 60_000,
+      "Too many sign-in attempts for this account. Try again in 15 minutes or reset your password.",
+    );
     const user = await authenticate(email, str(fd, "password"));
     await startSession(user.id);
     if (user.country_code) {
@@ -81,13 +95,13 @@ export async function resetPasswordAction(_: ActionState, fd: FormData) {
   });
 }
 
-/** Saves the visitor's country choice (§4.1). Signed-in members change it in their profile. */
+/** Saves the visitor's country choice. Signed-in members change it in their profile. */
 export async function setCountryAction(fd: FormData) {
   const code = str(fd, "country").toUpperCase();
   if (!isCountryCode(code)) return;
   (await cookies()).set(COUNTRY_COOKIE, code, { path: "/", maxAge: 365 * 86400, sameSite: "lax" });
   const u = await currentUser();
-  if (u && !u.country_code) await query("UPDATE users SET country_code = $2 WHERE id = $1", [u.id, code]);
+  if (u && !u.country_code) await setCountryIfMissing(u.id, code);
   const back = str(fd, "back");
   if (back) redirect(safeNext(back));
 }

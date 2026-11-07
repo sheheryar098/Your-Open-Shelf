@@ -10,18 +10,36 @@ describe("credit ledger", () => {
   it("requires a reason for admin adjustments and writes an audit record", async () => {
     const admin = await adminUser();
     const m = await makeUser();
-    await expect(adminAdjust({ adminId: admin, userId: m.id, amount: 1, reason: "", idempotencyKey: key() })).rejects.toThrow(/reason/);
-    await adminAdjust({ adminId: admin, userId: m.id, amount: 2, reason: "Goodwill after carrier loss", idempotencyKey: key() });
+    await expect(
+      adminAdjust({ adminId: admin, userId: m.id, amount: 1, reason: "", idempotencyKey: key() }),
+    ).rejects.toThrow(/reason/);
+    await adminAdjust({
+      adminId: admin,
+      userId: m.id,
+      amount: 2,
+      reason: "Goodwill after carrier loss",
+      idempotencyKey: key(),
+    });
     expect(await balance(m.id)).toEqual({ available: 2, reserved: 0 });
-    const a = await pool().query("SELECT reason, metadata FROM admin_audit_logs WHERE action = 'credit.adjust' AND target_id = $1", [m.id]);
+    const a = await pool().query(
+      "SELECT reason, metadata FROM admin_audit_logs WHERE action = 'credit.adjust' AND target_id = $1",
+      [m.id],
+    );
     expect(a.rows[0].reason).toBe("Goodwill after carrier loss");
     expect(a.rows[0].metadata.amount).toBe(2);
   });
 
   it("never lets an adjustment push a balance below zero", async () => {
     const m = await makeUser({ credits: 1 });
-    await expect(adminAdjust({ adminId: await adminUser(), userId: m.id, amount: -2, reason: "Correction test", idempotencyKey: key() }))
-      .rejects.toThrow(/enough available credits/);
+    await expect(
+      adminAdjust({
+        adminId: await adminUser(),
+        userId: m.id,
+        amount: -2,
+        reason: "Correction test",
+        idempotencyKey: key(),
+      }),
+    ).rejects.toThrow(/enough available credits/);
     expect(await balance(m.id)).toEqual({ available: 1, reserved: 0 });
   });
 
@@ -36,15 +54,25 @@ describe("credit ledger", () => {
 
   it("is append-only at the database level", async () => {
     const m = await makeUser({ credits: 1 });
-    await expect(pool().query("UPDATE credit_ledger SET available_delta = 100 WHERE user_id = $1", [m.id])).rejects.toThrow(/append-only/);
+    await expect(
+      pool().query("UPDATE credit_ledger SET available_delta = 100 WHERE user_id = $1", [m.id]),
+    ).rejects.toThrow(/append-only/);
     await expect(pool().query("DELETE FROM credit_ledger WHERE user_id = $1", [m.id])).rejects.toThrow(/append-only/);
-    await expect(pool().query("UPDATE credit_accounts SET available = -1 WHERE user_id = $1", [m.id])).rejects.toThrow(/check constraint/);
+    await expect(pool().query("UPDATE credit_accounts SET available = -1 WHERE user_id = $1", [m.id])).rejects.toThrow(
+      /check constraint/,
+    );
   });
 
   it("can reverse an erroneous adjustment exactly once", async () => {
     const admin = await adminUser();
     const m = await makeUser();
-    const e = await adminAdjust({ adminId: admin, userId: m.id, amount: 3, reason: "Entered wrong amount", idempotencyKey: key() });
+    const e = await adminAdjust({
+      adminId: admin,
+      userId: m.id,
+      amount: 3,
+      reason: "Entered wrong amount",
+      idempotencyKey: key(),
+    });
     await reverseEntry({ adminId: admin, ledgerId: e.id, reason: "Reversing mistaken adjustment" });
     await reverseEntry({ adminId: admin, ledgerId: e.id, reason: "Reversing mistaken adjustment" });
     expect(await balance(m.id)).toEqual({ available: 0, reserved: 0 });
@@ -55,10 +83,18 @@ describe("credit ledger", () => {
     const admin = await adminUser();
     await Promise.all(
       Array.from({ length: 20 }, (_, i) =>
-        tx((c) => postLedgerEvent(c, {
-          userId: m.id, type: "credit_admin_adjustment", availableDelta: 1, reservedDelta: 0,
-          reason: `parallel ${i}`, actorType: "admin", actorId: admin, idempotencyKey: `p-${m.id}-${i}`,
-        })),
+        tx((c) =>
+          postLedgerEvent(c, {
+            userId: m.id,
+            type: "credit_admin_adjustment",
+            availableDelta: 1,
+            reservedDelta: 0,
+            reason: `parallel ${i}`,
+            actorType: "admin",
+            actorId: admin,
+            idempotencyKey: `p-${m.id}-${i}`,
+          }),
+        ),
       ),
     );
     expect(await balance(m.id)).toEqual({ available: 20, reserved: 0 });

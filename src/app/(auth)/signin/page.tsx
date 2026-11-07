@@ -12,7 +12,11 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
   return (
     <div className="container tight page">
       <h1>Sign in</h1>
-      {sp.reset && <div className="alert alert-ok" style={{ marginBottom: 16 }}>Your password has been reset. Sign in with your new password.</div>}
+      {sp.reset && (
+        <div className="alert alert-ok" style={{ marginBottom: 16 }}>
+          Your password has been reset. Sign in with your new password.
+        </div>
+      )}
       <ActionForm action={signInAction}>
         <input type="hidden" name="next" value={sp.next ?? ""} />
         <div className="field">
@@ -26,7 +30,8 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
         <SubmitButton pendingText="Signing in…">Sign in</SubmitButton>
       </ActionForm>
       <p className="small" style={{ marginTop: 16 }}>
-        <Link href="/forgot-password">Forgot your password?</Link> · New to YOS? <Link href="/signup">Create an account</Link>
+        <Link href="/forgot-password">Forgot your password?</Link> · New to YOS?{" "}
+        <Link href="/signup">Create an account</Link>
       </p>
     </div>
   );

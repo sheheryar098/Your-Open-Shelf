@@ -2,7 +2,7 @@ import { query, queryOne } from "@/server/db";
 
 const n = (v: unknown) => Number(v ?? 0);
 
-/** Admin overview counters (§16.1). */
+/** Counters for the admin overview. */
 export async function overview() {
   const r = await queryOne<Record<string, string>>(`
     SELECT
@@ -16,15 +16,18 @@ export async function overview() {
       (SELECT count(*) FROM disputes WHERE status <> 'resolved') AS open_disputes,
       (SELECT count(*) FROM reports WHERE status = 'open') AS open_reports,
       (SELECT count(*) FROM support_tickets WHERE status IN ('open','in_progress')) AS open_tickets,
-      (SELECT coalesce(sum(available_delta), 0) FROM credit_ledger WHERE event_type = 'credit_earned' AND created_at > now() - interval '30 days') AS credits_issued_30d,
-      (SELECT coalesce(-sum(reserved_delta), 0) FROM credit_ledger WHERE event_type = 'credit_spent' AND created_at > now() - interval '30 days') AS credits_redeemed_30d,
+      (SELECT coalesce(sum(available_delta), 0) FROM credit_ledger WHERE event_type = 'credit_earned'
+        AND created_at > now() - interval '30 days') AS credits_issued_30d,
+      (SELECT coalesce(-sum(reserved_delta), 0) FROM credit_ledger WHERE event_type = 'credit_spent'
+        AND created_at > now() - interval '30 days') AS credits_redeemed_30d,
       (SELECT coalesce(sum(available + reserved), 0) FROM credit_accounts) AS credits_outstanding,
-      (SELECT avg(extract(epoch FROM shipped_at - accepted_at) / 3600) FROM exchanges WHERE shipped_at > now() - interval '90 days') AS avg_dispatch_hours
+      (SELECT avg(extract(epoch FROM shipped_at - accepted_at) / 3600) FROM exchanges
+        WHERE shipped_at > now() - interval '90 days') AS avg_dispatch_hours
   `);
   return Object.fromEntries(Object.entries(r ?? {}).map(([k, v]) => [k, n(v)])) as Record<string, number>;
 }
 
-/** Marketplace, trust and route KPIs (§23). North star: successful exchanges per month. */
+/** Marketplace, trust and route KPIs. The headline number is successful exchanges per month. */
 export async function kpis() {
   const monthly = await query<{ month: string; completed: string; requested: string }>(`
     SELECT to_char(m, 'YYYY-MM') AS month,
@@ -44,7 +47,8 @@ export async function kpis() {
       count(*) FILTER (WHERE status = 'completed') AS completed,
       count(*) FILTER (WHERE status = 'refunded') AS refunded,
       count(*) FILTER (WHERE id IN (SELECT exchange_id FROM disputes)) AS disputed,
-      percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM shipped_at - accepted_at) / 3600) FILTER (WHERE shipped_at IS NOT NULL) AS median_dispatch_hours
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM shipped_at - accepted_at) / 3600)
+        FILTER (WHERE shipped_at IS NOT NULL) AS median_dispatch_hours
     FROM exchanges WHERE requested_at > now() - interval '90 days'`);
 
   const listingToRequest = await queryOne<{ median_hours: string | null }>(`
@@ -60,7 +64,15 @@ export async function kpis() {
       (SELECT count(DISTINCT owner_id) FROM listings WHERE published_at IS NOT NULL) AS listers,
       (SELECT count(DISTINCT requester_id) FROM exchanges) AS requesters`);
 
-  const routes = await query<{ origin: string; destination: string; total: string; completed: string; disputed: string; avg_delivery_days: string | null; cancelled: string }>(`
+  const routes = await query<{
+    origin: string;
+    destination: string;
+    total: string;
+    completed: string;
+    disputed: string;
+    avg_delivery_days: string | null;
+    cancelled: string;
+  }>(`
     SELECT e.origin_country AS origin, e.destination_country AS destination,
       count(*) AS total,
       count(*) FILTER (WHERE e.status = 'completed') AS completed,
@@ -80,8 +92,10 @@ export async function kpis() {
     SELECT
       (SELECT count(*) FROM reports WHERE created_at > now() - interval '90 days') AS reports_90d,
       (SELECT count(*) FROM disputes WHERE created_at > now() - interval '90 days') AS disputes_90d,
-      (SELECT count(*) FROM disputes WHERE issue_type IN ('delivered_not_received','tracking_not_updating') AND created_at > now() - interval '90 days') AS non_delivery_90d,
-      (SELECT count(*) FROM disputes WHERE issue_type IN ('damaged','wrong_book','condition_mismatch') AND created_at > now() - interval '90 days') AS misdescription_90d,
+      (SELECT count(*) FROM disputes WHERE issue_type IN ('delivered_not_received','tracking_not_updating')
+        AND created_at > now() - interval '90 days') AS non_delivery_90d,
+      (SELECT count(*) FROM disputes WHERE issue_type IN ('damaged','wrong_book','condition_mismatch')
+        AND created_at > now() - interval '90 days') AS misdescription_90d,
       (SELECT avg(extract(epoch FROM decided_at - created_at) / 3600) FROM disputes WHERE decided_at IS NOT NULL) AS avg_resolution_hours,
       (SELECT avg(rating) FROM reviews WHERE hidden_at IS NULL) AS avg_rating`);
 
@@ -89,8 +103,20 @@ export async function kpis() {
     monthly: monthly.map((m) => ({ month: m.month, completed: n(m.completed), requested: n(m.requested) })),
     funnel: Object.fromEntries(Object.entries(funnel ?? {}).map(([k, v]) => [k, n(v)])) as Record<string, number>,
     medianListingToRequestHours: listingToRequest?.median_hours ? Number(listingToRequest.median_hours) : null,
-    participation: { both: n(participation?.both), members: n(participation?.members), listers: n(participation?.listers), requesters: n(participation?.requesters) },
-    routes: routes.map((r) => ({ ...r, total: n(r.total), completed: n(r.completed), disputed: n(r.disputed), cancelled: n(r.cancelled), avg_delivery_days: r.avg_delivery_days ? Number(r.avg_delivery_days) : null })),
+    participation: {
+      both: n(participation?.both),
+      members: n(participation?.members),
+      listers: n(participation?.listers),
+      requesters: n(participation?.requesters),
+    },
+    routes: routes.map((r) => ({
+      ...r,
+      total: n(r.total),
+      completed: n(r.completed),
+      disputed: n(r.disputed),
+      cancelled: n(r.cancelled),
+      avg_delivery_days: r.avg_delivery_days ? Number(r.avg_delivery_days) : null,
+    })),
     countries: countries.map((c) => ({ code: c.code, members: n(c.members), listings: n(c.listings) })),
     trust: Object.fromEntries(Object.entries(trust ?? {}).map(([k, v]) => [k, n(v)])) as Record<string, number>,
   };

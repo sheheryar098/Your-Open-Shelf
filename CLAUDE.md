@@ -18,11 +18,14 @@ src/
   app/        routing, layouts and pages only; composes features
   features/   one folder per feature: components/, api/ (server actions), model/
   shared/     ui/ (design-system primitives), api/ (session, action runner), lib/ (cross-cutting helpers)
-  server/     backend: db, auth, rbac, domain modules, jobs, outbound http. No React, no next/navigation
+  server/     backend: db, auth, rbac, domain modules, queries (read models), jobs, outbound http. No React, no Next.js
 ```
 
 - A feature must not import another feature. If two features need something, move it to `shared/`.
-- `shared/` must not import from `features/` or `app/`. `server/` must not import from `features/`, `shared/` or `app/`.
+- `shared/` must not import from `features/` or `app/`. `server/` may only use `shared/lib`.
+- Only `src/server` imports the database client. Pages and actions call query or domain functions.
+- Code comments explain why, in plain language. Don't reference planning documents or section numbers.
+- Formatting is Prettier's (`npm run format`); don't hand-format.
 - No barrel (`index.ts`) files. Import from the source module.
 - Server data comes from Server Components; there is no global client store.
 - Credits change only through the ledger functions in `src/server/domain/credits.ts`, inside a transaction.

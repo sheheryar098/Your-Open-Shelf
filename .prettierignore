@@ -1,0 +1,8 @@
+.next
+node_modules
+storage
+coverage
+package-lock.json
+next-env.d.ts
+*.md
+.claude

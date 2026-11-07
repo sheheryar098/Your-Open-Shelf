@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { problem } from "@/shared/api/http";
 import { canViewFile, getFile, readStored } from "@/server/domain/files";
 import { currentUser } from "@/shared/api/session";
+import { isUuid } from "@/shared/lib/ids";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return problem("not-found");
+  if (!isUuid(id)) return problem("not-found");
   const row = await getFile(id);
   if (!row) return problem("not-found");
   const viewer = await currentUser();

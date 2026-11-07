@@ -18,7 +18,9 @@ export function Flash({ value }: { value: string }) {
   return (
     <div className="toast" role="status" aria-live="polite">
       <span>{message}</span>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} aria-label="Dismiss">✕</button>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} aria-label="Dismiss">
+        ✕
+      </button>
     </div>
   );
 }

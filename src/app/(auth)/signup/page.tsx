@@ -15,17 +15,33 @@ export default async function SignUp() {
   return (
     <div className="container tight page">
       <h1>Join YOS</h1>
-      <p className="muted">Free to join. List books you&apos;re ready to pass on, and earn credits to request your next read.</p>
+      <p className="muted">
+        Free to join. List books you&apos;re ready to pass on, and earn credits to request your next read.
+      </p>
       <ActionForm action={registerAction}>
         <div className="field">
           <label htmlFor="country">Country</label>
           <CountrySelect defaultValue={country} />
-          <span className="help">{country ? "We suggested this from your connection — change it if it's wrong." : "Where you'll send and receive books."}</span>
+          <span className="help">
+            {country
+              ? "We guessed this from your connection. Change it if it's wrong."
+              : "Where you'll send and receive books."}
+          </span>
         </div>
         <div className="field">
           <label htmlFor="displayName">Display name</label>
-          <input id="displayName" name="displayName" type="text" required minLength={2} maxLength={40} autoComplete="nickname" />
-          <span className="help">Shown publicly on your listings and profile. You don&apos;t need to use your full name.</span>
+          <input
+            id="displayName"
+            name="displayName"
+            type="text"
+            required
+            minLength={2}
+            maxLength={40}
+            autoComplete="nickname"
+          />
+          <span className="help">
+            Shown publicly on your listings and profile. You don&apos;t need to use your full name.
+          </span>
         </div>
         <div className="field">
           <label htmlFor="email">Email</label>
@@ -39,8 +55,23 @@ export default async function SignUp() {
         <label className="check">
           <input type="checkbox" name="acceptTerms" required />
           <span>
-            I accept the <Link href="/legal/terms" target="_blank">Terms of Service</Link>, <Link href="/legal/privacy" target="_blank">Privacy Policy</Link>,{" "}
-            <Link href="/legal/credits" target="_blank">Credit System Terms</Link> and <Link href="/legal/disputes" target="_blank">exchange rules</Link>.
+            I accept the{" "}
+            <Link href="/legal/terms" target="_blank">
+              Terms of Service
+            </Link>
+            ,{" "}
+            <Link href="/legal/privacy" target="_blank">
+              Privacy Policy
+            </Link>
+            ,{" "}
+            <Link href="/legal/credits" target="_blank">
+              Credit System Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/legal/disputes" target="_blank">
+              exchange rules
+            </Link>
+            .
           </span>
         </label>
         <label className="check">

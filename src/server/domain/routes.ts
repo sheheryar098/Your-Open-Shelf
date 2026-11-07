@@ -54,17 +54,15 @@ export async function getRoute(origin: string, destination: string, db?: Db) {
 export async function enabledRoutes(db?: Db) {
   return query<ShippingRoute>(
     `SELECT r.* FROM shipping_routes r
-     JOIN countries o ON o.code = r.origin_country AND o.status IN ('open', 'limited')
-     JOIN countries d ON d.code = r.destination_country AND d.status IN ('open', 'limited')
-     WHERE r.enabled ORDER BY r.origin_country, r.destination_country`,
+       JOIN countries o ON o.code = r.origin_country AND o.status IN ('open', 'limited')
+       JOIN countries d ON d.code = r.destination_country AND d.status IN ('open', 'limited')
+      WHERE r.enabled ORDER BY r.origin_country, r.destination_country`,
     [],
     db,
   );
 }
 
-export type Eligibility =
-  | { ok: true; route: ShippingRoute }
-  | { ok: false; reason: string };
+export type Eligibility = { ok: true; route: ShippingRoute } | { ok: false; reason: string };
 
 export interface ShipSettings {
   origin_country: string;
@@ -75,7 +73,7 @@ export interface ShipSettings {
 /**
  * Can a listing shipped from `listing.origin_country` be requested for delivery to
  * `destination`? Combines country status, the admin route matrix, and the sender's own
- * shipping preferences (§4.3, Appendix A: "Unsupported routes cannot complete a request").
+ * shipping preferences. An unsupported route can never complete a request.
  */
 export async function checkEligibility(listing: ShipSettings, destination: string, db?: Db): Promise<Eligibility> {
   const origin = listing.origin_country;
@@ -98,9 +96,10 @@ export async function checkEligibility(listing: ShipSettings, destination: strin
   if (!route || !route.enabled) {
     return {
       ok: false,
-      reason: origin === destination
-        ? `Exchanges within ${countryName(origin)} aren't enabled yet.`
-        : `The ${countryName(origin)} → ${countryName(destination)} route isn't supported yet.`,
+      reason:
+        origin === destination
+          ? `Exchanges within ${countryName(origin)} aren't enabled yet.`
+          : `The ${countryName(origin)} → ${countryName(destination)} route isn't supported yet.`,
     };
   }
   return { ok: true, route };
@@ -110,9 +109,9 @@ export async function checkEligibility(listing: ShipSettings, destination: strin
 export async function reachableDestinations(listing: ShipSettings, db?: Db): Promise<string[]> {
   const rows = await query<{ destination_country: string }>(
     `SELECT r.destination_country FROM shipping_routes r
-     JOIN countries d ON d.code = r.destination_country AND d.status IN ('open', 'limited')
-     JOIN countries o ON o.code = r.origin_country AND o.status IN ('open', 'limited')
-     WHERE r.enabled AND r.origin_country = $1`,
+       JOIN countries d ON d.code = r.destination_country AND d.status IN ('open', 'limited')
+       JOIN countries o ON o.code = r.origin_country AND o.status IN ('open', 'limited')
+      WHERE r.enabled AND r.origin_country = $1`,
     [listing.origin_country],
     db,
   );
@@ -126,13 +125,18 @@ export async function reachableDestinations(listing: ShipSettings, db?: Db): Pro
 }
 
 // ---------------------------------------------------------------------------
-// Admin management (§16.5)
+// Admin management
 // ---------------------------------------------------------------------------
 
 export async function updateCountry(
   adminId: string,
   code: string,
-  patch: { status: Country["status"]; status_note?: string | null; prohibited_items_notice?: string | null; currency?: string | null },
+  patch: {
+    status: Country["status"];
+    status_note?: string | null;
+    prohibited_items_notice?: string | null;
+    currency?: string | null;
+  },
   reason: string,
 ) {
   const why = requireReason(reason);
@@ -140,11 +144,15 @@ export async function updateCountry(
   if (!prev) throw new DomainError("Unknown country.");
   await query(
     `UPDATE countries SET status = $2, status_note = $3, prohibited_items_notice = $4, currency = coalesce($5, currency), updated_at = now()
-     WHERE code = $1`,
+      WHERE code = $1`,
     [code, patch.status, patch.status_note ?? null, patch.prohibited_items_notice ?? null, patch.currency ?? null],
   );
   await audit(pool(), {
-    actorId: adminId, action: "country.update", targetType: "country", targetId: code, reason: why,
+    actorId: adminId,
+    action: "country.update",
+    targetType: "country",
+    targetId: code,
+    reason: why,
     metadata: { from: prev.status, to: patch.status },
   });
 }
@@ -160,15 +168,17 @@ export async function upsertRoute(adminId: string, r: RouteInput, reason: string
     throw new DomainError("A route can't require tracking when tracking isn't available on it.");
   }
   if (r.origin_country !== r.destination_country && r.enabled && !r.customs_required && !r.customs_notice) {
-    // Cross-border routes need an explicit customs position before enabling (§4.5).
-    throw new DomainError("Add a customs notice (or mark customs documents as required) before enabling a cross-border route.");
+    // Cross-border routes need an explicit customs position before they can be enabled.
+    throw new DomainError(
+      "Add a customs notice (or mark customs documents as required) before enabling a cross-border route.",
+    );
   }
   const rows = await query<{ id: string }>(
     `INSERT INTO shipping_routes (origin_country, destination_country, enabled, tracking_available, tracking_required,
         carrier_guidance, min_delivery_days, max_delivery_days, postage_estimate_min, postage_estimate_max, postage_currency,
         max_weight_grams, customs_required, customs_notice, restricted_content_notes, risk_level, support_notes)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-     ON CONFLICT (origin_country, destination_country) DO UPDATE SET
+         ON CONFLICT (origin_country, destination_country) DO UPDATE SET
         enabled = EXCLUDED.enabled, tracking_available = EXCLUDED.tracking_available,
         tracking_required = EXCLUDED.tracking_required, carrier_guidance = EXCLUDED.carrier_guidance,
         min_delivery_days = EXCLUDED.min_delivery_days, max_delivery_days = EXCLUDED.max_delivery_days,
@@ -179,14 +189,31 @@ export async function upsertRoute(adminId: string, r: RouteInput, reason: string
         support_notes = EXCLUDED.support_notes, updated_at = now()
      RETURNING id`,
     [
-      r.origin_country, r.destination_country, r.enabled, r.tracking_available, r.tracking_required,
-      r.carrier_guidance, r.min_delivery_days, r.max_delivery_days, r.postage_estimate_min, r.postage_estimate_max,
-      r.postage_currency, r.max_weight_grams, r.customs_required, r.customs_notice, r.restricted_content_notes,
-      r.risk_level, r.support_notes,
+      r.origin_country,
+      r.destination_country,
+      r.enabled,
+      r.tracking_available,
+      r.tracking_required,
+      r.carrier_guidance,
+      r.min_delivery_days,
+      r.max_delivery_days,
+      r.postage_estimate_min,
+      r.postage_estimate_max,
+      r.postage_currency,
+      r.max_weight_grams,
+      r.customs_required,
+      r.customs_notice,
+      r.restricted_content_notes,
+      r.risk_level,
+      r.support_notes,
     ],
   );
   await audit(pool(), {
-    actorId: adminId, action: "route.upsert", targetType: "route", targetId: rows[0].id, reason: why,
+    actorId: adminId,
+    action: "route.upsert",
+    targetType: "route",
+    targetId: rows[0].id,
+    reason: why,
     metadata: { origin: r.origin_country, destination: r.destination_country, enabled: r.enabled },
   });
   return rows[0].id;

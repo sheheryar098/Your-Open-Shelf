@@ -7,6 +7,7 @@ import { policy, appUrl } from "@/server/config";
 import { addDays, addHours, now } from "@/server/clock";
 import { EmailPriority, notify, queueEmail } from "./notifications";
 import { audit, requireReason } from "./audit";
+import { saveUpload } from "./files";
 
 export interface User {
   id: string;
@@ -101,13 +102,16 @@ export async function verifyEmail(token: string): Promise<string | null> {
     const row = (
       await c.query<{ user_id: string }>(
         `UPDATE email_tokens SET used_at = $2
-         WHERE token_hash = $1 AND purpose = 'verify_email' AND used_at IS NULL AND expires_at > $2
+          WHERE token_hash = $1 AND purpose = 'verify_email' AND used_at IS NULL AND expires_at > $2
          RETURNING user_id`,
         [sha256(token), now()],
       )
     ).rows[0];
     if (!row) return null;
-    await c.query("UPDATE users SET email_verified_at = coalesce(email_verified_at, $2), updated_at = now() WHERE id = $1", [row.user_id, now()]);
+    await c.query(
+      "UPDATE users SET email_verified_at = coalesce(email_verified_at, $2), updated_at = now() WHERE id = $1",
+      [row.user_id, now()],
+    );
     return row.user_id;
   });
 }
@@ -135,10 +139,13 @@ export async function authenticate(email: string, password: string): Promise<Use
 export async function createSession(userId: string, meta: { ip?: string | null; userAgent?: string | null }) {
   const token = randomToken();
   const expires = addDays(now(), policy.sessionDays);
-  await query(
-    "INSERT INTO sessions (id_hash, user_id, expires_at, ip, user_agent) VALUES ($1, $2, $3, $4, $5)",
-    [sha256(token), userId, expires, meta.ip ?? null, meta.userAgent?.slice(0, 300) ?? null],
-  );
+  await query("INSERT INTO sessions (id_hash, user_id, expires_at, ip, user_agent) VALUES ($1, $2, $3, $4, $5)", [
+    sha256(token),
+    userId,
+    expires,
+    meta.ip ?? null,
+    meta.userAgent?.slice(0, 300) ?? null,
+  ]);
   return { token, expires };
 }
 
@@ -188,7 +195,7 @@ export async function resetPassword(token: string, newPassword: string) {
     const row = (
       await c.query<{ user_id: string }>(
         `UPDATE email_tokens SET used_at = $2
-         WHERE token_hash = $1 AND purpose = 'reset_password' AND used_at IS NULL AND expires_at > $2
+          WHERE token_hash = $1 AND purpose = 'reset_password' AND used_at IS NULL AND expires_at > $2
          RETURNING user_id`,
         [sha256(token), now()],
       )
@@ -196,16 +203,44 @@ export async function resetPassword(token: string, newPassword: string) {
     if (!row) throw new DomainError("This reset link is invalid or has expired.");
     await c.query("UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1", [row.user_id, hash]);
     await c.query("DELETE FROM sessions WHERE user_id = $1", [row.user_id]);
-    await notify(c, row.user_id, { type: "security", title: "Your YOS password was changed", body: "If you didn't do this, contact support immediately." });
+    await notify(c, row.user_id, {
+      type: "security",
+      title: "Your YOS password was changed",
+      body: "If you didn't do this, contact support immediately.",
+    });
   });
+}
+
+export async function setAvatar(userId: string, file: File) {
+  await tx(async (c) => {
+    const fileId = await saveUpload(c, file, "avatar", userId);
+    await c.query("UPDATE users SET avatar_file_id = $2, updated_at = now() WHERE id = $1", [userId, fileId]);
+  });
+}
+
+/** Stores the country a signed-in member picked from the country banner, if they had none. */
+export async function setCountryIfMissing(userId: string, code: string) {
+  if (!isCountryCode(code)) return;
+  await query("UPDATE users SET country_code = $2 WHERE id = $1 AND country_code IS NULL", [
+    userId,
+    code.toUpperCase(),
+  ]);
 }
 
 export async function changePassword(userId: string, current: string, next: string) {
   const row = await queryOne<{ password_hash: string }>("SELECT password_hash FROM users WHERE id = $1", [userId]);
-  if (!row || !(await verifyPassword(current, row.password_hash))) throw new DomainError("Your current password is incorrect.");
+  if (!row || !(await verifyPassword(current, row.password_hash)))
+    throw new DomainError("Your current password is incorrect.");
   if (next.length < 10) throw new DomainError("Use at least 10 characters for your new password.");
-  await query("UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1", [userId, await hashPassword(next)]);
-  await notify(pool(), userId, { type: "security", title: "Your YOS password was changed", body: "If you didn't do this, contact support immediately." });
+  await query("UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1", [
+    userId,
+    await hashPassword(next),
+  ]);
+  await notify(pool(), userId, {
+    type: "security",
+    title: "Your YOS password was changed",
+    body: "If you didn't do this, contact support immediately.",
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +264,8 @@ export async function updateProfile(userId: string, p: z.infer<typeof profileSch
        AND status IN ('requested','accepted','shipped','delivered','disputed')`,
       [userId],
     );
-    if (Number(live?.n) > 0) throw new DomainError("You can change your country once your in-progress exchanges are finished.");
+    if (Number(live?.n) > 0)
+      throw new DomainError("You can change your country once your in-progress exchanges are finished.");
   }
   let tz = "UTC";
   try {
@@ -240,39 +276,57 @@ export async function updateProfile(userId: string, p: z.infer<typeof profileSch
   }
   await tx(async (c) => {
     await c.query(
-      `UPDATE users SET display_name = $2, bio = nullif($3, ''), country_code = $4, preferred_language = $5, timezone = $6, updated_at = now()
-       WHERE id = $1`,
+      `UPDATE users SET display_name = $2, bio = nullif($3, ''), country_code = $4, preferred_language = $5,
+        timezone = $6, updated_at = now()
+        WHERE id = $1`,
       [userId, p.displayName, p.bio, country, p.preferredLanguage, tz],
     );
     if (prev && prev.country_code !== country) {
       // Active listings move with the member's country; they keep their own shipping settings.
       await c.query(
-        "UPDATE listings SET origin_country = $2, updated_at = now() WHERE owner_id = $1 AND status IN ('draft','active','paused','unavailable')",
+        `UPDATE listings SET origin_country = $2, updated_at = now()
+          WHERE owner_id = $1 AND status IN ('draft','active','paused','unavailable')`,
         [userId, country],
       );
     }
   });
 }
 
-export async function updateShippingPreferences(userId: string, scope: "domestic" | "international", countries: string[], applyToListings: boolean) {
+export async function updateShippingPreferences(
+  userId: string,
+  scope: "domestic" | "international",
+  countries: string[],
+  applyToListings: boolean,
+) {
   const clean = [...new Set(countries.map((c) => c.toUpperCase()).filter(isCountryCode))];
   await tx(async (c) => {
-    await c.query("UPDATE users SET ship_scope = $2, ship_countries = $3, updated_at = now() WHERE id = $1", [userId, scope, clean]);
+    await c.query("UPDATE users SET ship_scope = $2, ship_countries = $3, updated_at = now() WHERE id = $1", [
+      userId,
+      scope,
+      clean,
+    ]);
     if (applyToListings) {
       await c.query(
-        "UPDATE listings SET ship_scope = $2, ship_countries = $3, updated_at = now() WHERE owner_id = $1 AND status IN ('draft','active','paused','unavailable')",
+        `UPDATE listings SET ship_scope = $2, ship_countries = $3, updated_at = now()
+          WHERE owner_id = $1 AND status IN ('draft','active','paused','unavailable')`,
         [userId, scope, clean],
       );
     }
   });
 }
 
-export async function updateNotificationPrefs(userId: string, prefs: Record<string, { inSite: boolean; email: boolean }>) {
-  await query("UPDATE users SET notification_prefs = $2, updated_at = now() WHERE id = $1", [userId, JSON.stringify(prefs)]);
+export async function updateNotificationPrefs(
+  userId: string,
+  prefs: Record<string, { inSite: boolean; email: boolean }>,
+) {
+  await query("UPDATE users SET notification_prefs = $2, updated_at = now() WHERE id = $1", [
+    userId,
+    JSON.stringify(prefs),
+  ]);
 }
 
 // ---------------------------------------------------------------------------
-// Privacy: data export & account closure (§16.2, §18.6)
+// Privacy: data export and account closure
 // ---------------------------------------------------------------------------
 
 export async function exportUserData(userId: string) {
@@ -285,7 +339,16 @@ export async function exportUserData(userId: string) {
     query("SELECT * FROM reviews WHERE reviewer_id = $1 OR reviewee_id = $1", [userId]),
     query("SELECT * FROM support_tickets WHERE user_id = $1", [userId]),
   ]);
-  return { exportedAt: now().toISOString(), user, addresses, listings, exchanges, creditLedger: ledger, reviews, supportTickets: tickets };
+  return {
+    exportedAt: now().toISOString(),
+    user,
+    addresses,
+    listings,
+    exchanges,
+    creditLedger: ledger,
+    reviews,
+    supportTickets: tickets,
+  };
 }
 
 /**
@@ -300,52 +363,94 @@ export async function closeAccount(userId: string, password: string) {
      AND status IN ('requested','accepted','shipped','delivered','disputed')`,
     [userId],
   );
-  if (Number(live?.n) > 0) throw new DomainError("Please finish or cancel your in-progress exchanges before closing your account.");
+  if (Number(live?.n) > 0)
+    throw new DomainError("Please finish or cancel your in-progress exchanges before closing your account.");
   await tx(async (c) => {
     await c.query(
       `UPDATE users SET status = 'closed', email = 'closed+' || id || '@invalid.yos', display_name = 'Former member',
          bio = NULL, avatar_file_id = NULL, password_hash = 'closed', notification_prefs = '{}', updated_at = now()
-       WHERE id = $1`,
+        WHERE id = $1`,
       [userId],
     );
-    await c.query("UPDATE addresses SET deleted_at = now(), recipient_name = '', line1 = '', line2 = NULL, phone = NULL WHERE user_id = $1", [userId]);
-    await c.query("UPDATE listings SET status = 'removed', status_reason = 'Account closed', updated_at = now() WHERE owner_id = $1 AND status <> 'exchanged'", [userId]);
+    await c.query(
+      `UPDATE addresses SET deleted_at = now(), recipient_name = '', line1 = '', line2 = NULL, phone = NULL
+        WHERE user_id = $1`,
+      [userId],
+    );
+    await c.query(
+      `UPDATE listings SET status = 'removed', status_reason = 'Account closed', updated_at = now()
+        WHERE owner_id = $1 AND status <> 'exchanged'`,
+      [userId],
+    );
     await c.query("DELETE FROM wishlist_items WHERE user_id = $1", [userId]);
     await c.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
   });
 }
 
 // ---------------------------------------------------------------------------
-// Staff member management (§16.2)
+// Staff member management
 // ---------------------------------------------------------------------------
 
-export async function setRestrictions(staffId: string, userId: string, r: { canList: boolean; canRequest: boolean }, reason: string) {
+export async function setRestrictions(
+  staffId: string,
+  userId: string,
+  r: { canList: boolean; canRequest: boolean },
+  reason: string,
+) {
   const why = requireReason(reason);
   await tx(async (c) => {
     await c.query(
       "UPDATE users SET can_list = $2, can_request = $3, restriction_reason = $4, updated_at = now() WHERE id = $1",
       [userId, r.canList, r.canRequest, r.canList && r.canRequest ? null : why],
     );
-    await audit(c, { actorId: staffId, action: "member.restrict", targetType: "user", targetId: userId, reason: why, metadata: r });
+    await audit(c, {
+      actorId: staffId,
+      action: "member.restrict",
+      targetType: "user",
+      targetId: userId,
+      reason: why,
+      metadata: r,
+    });
     await notify(c, userId, {
       type: "security",
-      title: r.canList && r.canRequest ? "Restrictions on your account were lifted" : "Some actions on your account are restricted",
+      title:
+        r.canList && r.canRequest
+          ? "Restrictions on your account were lifted"
+          : "Some actions on your account are restricted",
       body: r.canList && r.canRequest ? undefined : `Reason: ${why}. You can appeal by contacting support.`,
       link: "/support",
     });
   });
 }
 
-export async function setAccountStatus(staffId: string, userId: string, status: "active" | "suspended", reason: string) {
+export async function setAccountStatus(
+  staffId: string,
+  userId: string,
+  status: "active" | "suspended",
+  reason: string,
+) {
   const why = requireReason(reason);
   if (staffId === userId) throw new DomainError("You can't change your own account status.");
   await tx(async (c) => {
-    await c.query("UPDATE users SET status = $2, status_reason = $3, updated_at = now() WHERE id = $1 AND status <> 'closed'", [userId, status, why]);
+    await c.query(
+      "UPDATE users SET status = $2, status_reason = $3, updated_at = now() WHERE id = $1 AND status <> 'closed'",
+      [userId, status, why],
+    );
     if (status === "suspended") {
       await c.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
-      await c.query("UPDATE listings SET status = 'paused', status_reason = 'Account suspended', updated_at = now() WHERE owner_id = $1 AND status = 'active'", [userId]);
+      await c.query(
+        `UPDATE listings SET status = 'paused', status_reason = 'Account suspended', updated_at = now()
+          WHERE owner_id = $1 AND status = 'active'`,
+        [userId],
+      );
     }
-    await audit(c, { actorId: staffId, action: `member.${status === "active" ? "reinstate" : "suspend"}`, targetType: "user", targetId: userId, reason: why });
+    await audit(c, {
+      actorId: staffId,
+      action: `member.${status === "active" ? "reinstate" : "suspend"}`,
+      targetType: "user",
+      targetId: userId,
+      reason: why,
+    });
     await notify(c, userId, {
       type: "security",
       title: status === "suspended" ? "Your YOS account has been suspended" : "Your YOS account has been reinstated",
@@ -359,6 +464,13 @@ export async function setRole(adminId: string, userId: string, role: User["role"
   if (adminId === userId) throw new DomainError("You can't change your own role.");
   await tx(async (c) => {
     await c.query("UPDATE users SET role = $2, updated_at = now() WHERE id = $1", [userId, role]);
-    await audit(c, { actorId: adminId, action: "member.role", targetType: "user", targetId: userId, reason: why, metadata: { role } });
+    await audit(c, {
+      actorId: adminId,
+      action: "member.role",
+      targetType: "user",
+      targetId: userId,
+      reason: why,
+      metadata: { role },
+    });
   });
 }

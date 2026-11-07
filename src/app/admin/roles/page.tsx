@@ -1,6 +1,6 @@
 import { requirePermission } from "@/shared/api/session";
 import { permissionsFor, type Permission } from "@/server/rbac";
-import { query } from "@/server/db";
+import { staffMembers } from "@/server/queries/admin";
 import Link from "next/link";
 
 export const metadata = { title: "Roles & permissions" };
@@ -29,18 +29,29 @@ export default async function Roles() {
   await requirePermission("members.roles");
   const mod = new Set(permissionsFor("moderator"));
   const admin = new Set(permissionsFor("admin"));
-  const staff = await query<{ id: string; display_name: string; email: string; role: string }>(
-    "SELECT id, display_name, email, role FROM users WHERE role <> 'member' AND status = 'active' ORDER BY role, display_name",
-  );
+  const staff = await staffMembers();
   return (
     <>
       <h1>Roles &amp; permissions</h1>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Permission</th><th>Moderator</th><th>Admin</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th>Moderator</th>
+              <th>Admin</th>
+            </tr>
+          </thead>
           <tbody>
             {(Object.keys(DESCRIBE) as Permission[]).map((p) => (
-              <tr key={p}><td><span className="mono small">{p}</span><div className="small muted">{DESCRIBE[p]}</div></td><td>{mod.has(p) ? "✓" : ""}</td><td>{admin.has(p) ? "✓" : ""}</td></tr>
+              <tr key={p}>
+                <td>
+                  <span className="mono small">{p}</span>
+                  <div className="small muted">{DESCRIBE[p]}</div>
+                </td>
+                <td>{mod.has(p) ? "✓" : ""}</td>
+                <td>{admin.has(p) ? "✓" : ""}</td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -48,9 +59,17 @@ export default async function Roles() {
       <section className="card">
         <h2>Staff</h2>
         {staff.map((s) => (
-          <div key={s.id} className="list-item"><div className="body"><Link href={`/admin/members/${s.id}`}>{s.display_name}</Link> <span className="small muted">{s.email}</span></div><span className="badge badge-info">{s.role}</span></div>
+          <div key={s.id} className="list-item">
+            <div className="body">
+              <Link href={`/admin/members/${s.id}`}>{s.display_name}</Link>{" "}
+              <span className="small muted">{s.email}</span>
+            </div>
+            <span className="badge badge-info">{s.role}</span>
+          </div>
         ))}
-        <p className="small muted">Change a member&apos;s role from their member page. Role changes are audit-logged.</p>
+        <p className="small muted">
+          Change a member&apos;s role from their member page. Role changes are audit-logged.
+        </p>
       </section>
     </>
   );

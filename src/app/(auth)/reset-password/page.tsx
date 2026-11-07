@@ -10,7 +10,9 @@ export default async function ResetPassword({ searchParams }: { searchParams: Pr
     return (
       <div className="container tight page">
         <h1>Reset link missing</h1>
-        <p><Link href="/forgot-password">Request a new reset link</Link>.</p>
+        <p>
+          <Link href="/forgot-password">Request a new reset link</Link>.
+        </p>
       </div>
     );
   }

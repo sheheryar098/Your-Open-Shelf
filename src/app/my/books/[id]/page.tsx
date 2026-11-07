@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/shared/api/session";
 import { getListingDetail } from "@/server/domain/listings";
-import { query } from "@/server/db";
+import { requestHistoryForListing } from "@/server/queries/member";
 import { authorsText, fmtDate } from "@/shared/lib/format";
 import { policy } from "@/server/config";
 import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
@@ -11,36 +11,57 @@ import { ExchangeBadge } from "@/features/exchanges/components/ExchangeBadge";
 import { ListingBadge } from "@/features/listings/components/ListingBadge";
 import { Photo } from "@/shared/ui/book-media";
 import {
-  addPhotosAction, listingStatusAction, publishListingAction, removePhotoAction, updateListingAction,
+  addPhotosAction,
+  listingStatusAction,
+  publishListingAction,
+  removePhotoAction,
+  updateListingAction,
 } from "@/features/listings/api/actions";
+import { isUuid } from "@/shared/lib/ids";
 
 export const metadata = { title: "Manage listing" };
 
-export default async function ManageListing({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
+export default async function ManageListing({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string }>;
+}) {
   const u = await requireUser("/my/books");
   const { id } = await params;
   const sp = await searchParams;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!isUuid(id)) notFound();
   const l = await getListingDetail(id);
   if (!l || l.owner_id !== u.id) notFound();
-  const exchanges = await query<{ id: string; status: string; requested_at: Date }>(
-    "SELECT id, status, requested_at FROM exchanges WHERE listing_id = $1 ORDER BY requested_at DESC",
-    [id],
-  );
+  const exchanges = await requestHistoryForListing(id);
   const editable = ["draft", "active", "paused", "unavailable"].includes(l.status);
   const publishable = ["draft", "paused", "unavailable"].includes(l.status);
 
   return (
     <div className="container page stack-lg">
-      <p className="small"><Link href="/my/books">← My books</Link></p>
+      <p className="small">
+        <Link href="/my/books">← My books</Link>
+      </p>
       <div className="row-between">
         <div>
           <h1 className="mb-0">{l.title}</h1>
           <div className="muted">{authorsText(l.authors)}</div>
         </div>
-        <div className="row"><ListingBadge status={l.status} />{l.status !== "draft" && <Link href={`/books/${l.id}`} className="btn btn-sm">View public page</Link>}</div>
+        <div className="row">
+          <ListingBadge status={l.status} />
+          {l.status !== "draft" && (
+            <Link href={`/books/${l.id}`} className="btn btn-sm">
+              View public page
+            </Link>
+          )}
+        </div>
       </div>
-      {sp.created && <div className="alert alert-ok">Draft saved. Check the details, make sure you have at least one photo, then publish.</div>}
+      {sp.created && (
+        <div className="alert alert-ok">
+          Draft saved. Check the details, make sure you have at least one photo, then publish.
+        </div>
+      )}
       {l.status_reason && <div className="alert alert-info">{l.status_reason}</div>}
 
       {publishable && (
@@ -49,7 +70,10 @@ export default async function ManageListing({ params, searchParams }: { params: 
           <ActionForm action={publishListingAction.bind(null, l.id)}>
             <label className="check">
               <input type="checkbox" name="confirmPossession" required />
-              <span>I confirm this book is in my possession, matches the description and photos, and I&apos;m ready to ship it within {policy.dispatchBusinessDays} business days of accepting a request.</span>
+              <span>
+                I confirm this book is in my possession, matches the description and photos, and I&apos;m ready to ship
+                it within {policy.dispatchBusinessDays} business days of accepting a request.
+              </span>
             </label>
             <label className="check small">
               <input type="checkbox" name="confirmAnotherCopy" />
@@ -69,7 +93,10 @@ export default async function ManageListing({ params, searchParams }: { params: 
             <ActionForm action={listingStatusAction.bind(null, l.id, "pause")} className="inline-form">
               <SubmitButton className="btn btn-sm">Pause listing</SubmitButton>
             </ActionForm>
-            <span className="small muted">Last confirmed available {fmtDate(l.confirmed_available_at)}. Listings are paused automatically after {policy.staleListingDays} days without confirmation.</span>
+            <span className="small muted">
+              Last confirmed available {fmtDate(l.confirmed_available_at)}. Listings are paused automatically after{" "}
+              {policy.staleListingDays} days without confirmation.
+            </span>
           </div>
         </section>
       )}
@@ -83,7 +110,11 @@ export default async function ManageListing({ params, searchParams }: { params: 
               <Photo fileId={p.file_id} alt="Listing photo" />
               {!["exchanged", "removed"].includes(l.status) && (
                 <div style={{ position: "absolute", bottom: 6, right: 6 }}>
-                  <ActionForm action={removePhotoAction.bind(null, l.id, p.id)} className="inline-form" confirm="Remove this photo?">
+                  <ActionForm
+                    action={removePhotoAction.bind(null, l.id, p.id)}
+                    className="inline-form"
+                    confirm="Remove this photo?"
+                  >
                     <SubmitButton className="btn btn-sm">Remove</SubmitButton>
                   </ActionForm>
                 </div>
@@ -92,9 +123,23 @@ export default async function ManageListing({ params, searchParams }: { params: 
           ))}
         </div>
         {l.photos.length < policy.maxPhotosPerListing && !["exchanged", "removed"].includes(l.status) && (
-          <ActionForm action={addPhotosAction.bind(null, l.id)} encType="multipart/form-data" className="row" resetOnSuccess>
-            <input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required aria-label="Add photos" />
-            <SubmitButton className="btn btn-sm" pendingText="Uploading…">Upload</SubmitButton>
+          <ActionForm
+            action={addPhotosAction.bind(null, l.id)}
+            encType="multipart/form-data"
+            className="row"
+            resetOnSuccess
+          >
+            <input
+              name="photos"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              required
+              aria-label="Add photos"
+            />
+            <SubmitButton className="btn btn-sm" pendingText="Uploading…">
+              Upload
+            </SubmitButton>
           </ActionForm>
         )}
       </section>
@@ -108,7 +153,9 @@ export default async function ManageListing({ params, searchParams }: { params: 
           </ActionForm>
         </section>
       ) : (
-        <div className="alert alert-info">This listing can&apos;t be edited while it&apos;s {l.status.replace("_", " ")}.</div>
+        <div className="alert alert-info">
+          This listing can&apos;t be edited while it&apos;s {l.status.replace("_", " ")}.
+        </div>
       )}
 
       {exchanges.length > 0 && (
@@ -116,7 +163,9 @@ export default async function ManageListing({ params, searchParams }: { params: 
           <h2>Request activity</h2>
           {exchanges.map((e) => (
             <div key={e.id} className="list-item">
-              <div className="body"><Link href={`/exchanges/${e.id}`}>Request on {fmtDate(e.requested_at)}</Link></div>
+              <div className="body">
+                <Link href={`/exchanges/${e.id}`}>Request on {fmtDate(e.requested_at)}</Link>
+              </div>
               <ExchangeBadge status={e.status} />
             </div>
           ))}
@@ -124,7 +173,11 @@ export default async function ManageListing({ params, searchParams }: { params: 
       )}
 
       {!["reserved", "exchanged", "removed", "under_review"].includes(l.status) && (
-        <ActionForm action={listingStatusAction.bind(null, l.id, "remove")} confirm="Remove this listing? This can't be undone." className="inline-form">
+        <ActionForm
+          action={listingStatusAction.bind(null, l.id, "remove")}
+          confirm="Remove this listing? This can't be undone."
+          className="inline-form"
+        >
           <SubmitButton className="btn btn-danger btn-sm">Remove listing</SubmitButton>
         </ActionForm>
       )}

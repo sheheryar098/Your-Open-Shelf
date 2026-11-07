@@ -4,7 +4,11 @@
  */
 
 export class UpstreamError extends Error {
-  constructor(message: string, public status: number | null, public retriable: boolean) {
+  constructor(
+    message: string,
+    public status: number | null,
+    public retriable: boolean,
+  ) {
     super(message);
     this.name = "UpstreamError";
   }

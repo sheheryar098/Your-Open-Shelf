@@ -21,7 +21,10 @@ export const CONDITIONS = {
   like_new: { label: "Like New", guidance: "Appears barely used; no meaningful damage." },
   very_good: { label: "Very Good", guidance: "Light signs of use; pages intact and readable." },
   good: { label: "Good", guidance: "Normal wear; may have notes or markings disclosed in the description." },
-  acceptable: { label: "Acceptable", guidance: "Significant wear but complete and usable; all defects clearly disclosed." },
+  acceptable: {
+    label: "Acceptable",
+    guidance: "Significant wear but complete and usable; all defects clearly disclosed.",
+  },
 } as const;
 export type Condition = keyof typeof CONDITIONS;
 
@@ -37,29 +40,66 @@ export const NOT_EXCHANGEABLE = [
 ];
 
 export const LANGUAGES: Record<string, string> = {
-  en: "English", es: "Spanish", fr: "French", de: "German", it: "Italian", pt: "Portuguese", nl: "Dutch",
-  ga: "Irish", cy: "Welsh", sv: "Swedish", no: "Norwegian", da: "Danish", fi: "Finnish", pl: "Polish",
-  ru: "Russian", uk: "Ukrainian", tr: "Turkish", ar: "Arabic", he: "Hebrew", fa: "Persian", ur: "Urdu",
-  hi: "Hindi", bn: "Bengali", pa: "Punjabi", ta: "Tamil", zh: "Chinese", ja: "Japanese", ko: "Korean",
-  vi: "Vietnamese", th: "Thai", id: "Indonesian", ms: "Malay", sw: "Swahili", el: "Greek", la: "Latin", other: "Other",
+  en: "English",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  it: "Italian",
+  pt: "Portuguese",
+  nl: "Dutch",
+  ga: "Irish",
+  cy: "Welsh",
+  sv: "Swedish",
+  no: "Norwegian",
+  da: "Danish",
+  fi: "Finnish",
+  pl: "Polish",
+  ru: "Russian",
+  uk: "Ukrainian",
+  tr: "Turkish",
+  ar: "Arabic",
+  he: "Hebrew",
+  fa: "Persian",
+  ur: "Urdu",
+  hi: "Hindi",
+  bn: "Bengali",
+  pa: "Punjabi",
+  ta: "Tamil",
+  zh: "Chinese",
+  ja: "Japanese",
+  ko: "Korean",
+  vi: "Vietnamese",
+  th: "Thai",
+  id: "Indonesian",
+  ms: "Malay",
+  sw: "Swahili",
+  el: "Greek",
+  la: "Latin",
+  other: "Other",
 };
 
 export const LISTING_STATUS_LABEL: Record<string, string> = {
-  draft: "Draft", active: "Active", reserved: "Reserved", unavailable: "Unavailable", paused: "Paused",
-  exchanged: "Exchanged", removed: "Removed", under_review: "Under review",
+  draft: "Draft",
+  active: "Active",
+  reserved: "Reserved",
+  unavailable: "Unavailable",
+  paused: "Paused",
+  exchanged: "Exchanged",
+  removed: "Removed",
+  under_review: "Under review",
 };
 
 export const EXCHANGE_STATUS_LABEL: Record<string, string> = {
   requested: "Awaiting sender response",
-  accepted: "Accepted — preparing shipment",
-  shipped: "Shipped — in transit",
-  delivered: "Delivered — dispute window open",
+  accepted: "Accepted, being prepared",
+  shipped: "In transit",
+  delivered: "Delivered",
   completed: "Completed",
   declined: "Declined",
   expired: "Expired",
   cancelled: "Cancelled",
-  disputed: "Disputed — under review",
-  refunded: "Closed — credit restored",
+  disputed: "In dispute",
+  refunded: "Closed, credit restored",
 };
 
 export const DISPUTE_TYPES: Record<string, string> = {
@@ -100,7 +140,7 @@ export const TICKET_CATEGORIES: Record<string, string> = {
   general: "General question",
 };
 
-/** Ticket categories that start at high priority (§17.2). */
+/** Ticket categories that start at high priority. */
 export const HIGH_PRIORITY_CATEGORIES = new Set(["account_security", "harassment_safety", "credit_balance"]);
 
 export const REVIEW_TAGS: Record<string, string> = {

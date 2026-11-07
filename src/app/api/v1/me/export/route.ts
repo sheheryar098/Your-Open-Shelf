@@ -4,7 +4,7 @@ import { problem, tooManyRequests } from "@/shared/api/http";
 import { rateLimit } from "@/server/rate-limit";
 import { exportUserData } from "@/server/domain/users";
 
-/** GET /api/v1/me/export — data access request (§18.6): everything YOS holds about the signed-in member. */
+/** GET /api/v1/me/export: everything YOS holds about the signed-in member. */
 export async function GET() {
   const u = await currentUser();
   if (!u) return problem("unauthenticated", "Sign in to download your data.");

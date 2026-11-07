@@ -1,5 +1,5 @@
 /**
- * Operational policy. Deadlines are initial targets from the blueprint (§10.4) and are
+ * Operational policy. The deadlines are starting values and are
  * intended to be tuned from real delivery data.
  */
 export const policy = {
@@ -17,7 +17,7 @@ export const policy = {
   maxPhotosPerListing: 6,
   maxUploadBytes: 5 * 1024 * 1024,
   activeListingLimit: { free: 50, plus: 250 } as Record<string, number>,
-  /** New-member limits (§12.3): open requests allowed before a first completed exchange. */
+  /** Open requests a member may have before their first exchange completes, and after. */
   openRequestLimitNewMember: 3,
   openRequestLimit: 10,
   sessionDays: 30,
@@ -25,5 +25,4 @@ export const policy = {
 
 export const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 export const uploadDir = () => process.env.UPLOAD_DIR ?? "storage/uploads";
-export const devOutboxEnabled = () =>
-  process.env.ENABLE_DEV_OUTBOX === "true" && process.env.NODE_ENV !== "production";
+export const devOutboxEnabled = () => process.env.ENABLE_DEV_OUTBOX === "true" && process.env.NODE_ENV !== "production";

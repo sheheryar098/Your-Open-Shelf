@@ -5,7 +5,8 @@ import { currentUser } from "@/shared/api/session";
 import { chosenCountry, suggestedCountry } from "@/shared/api/geo";
 import { countryName } from "@/shared/lib/countries";
 import { can } from "@/server/rbac";
-import { query, queryOne } from "@/server/db";
+import { availableCredits } from "@/server/queries/member";
+import { activeAnnouncements } from "@/server/domain/announcements";
 import { unreadCount } from "@/server/domain/notifications";
 import { setCountryAction, signOutAction } from "@/features/accounts/api/auth-actions";
 import { CountrySelect } from "@/shared/ui/primitives";
@@ -14,7 +15,8 @@ import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
   title: { default: "YOS — Your Open Shelf", template: "%s · YOS" },
-  description: "A community book exchange. List a book, send it to another reader, earn a credit, and use it to request your next read.",
+  description:
+    "A community book exchange. List a book, send it to another reader, earn a credit, and use it to request your next read.",
   applicationName: "YOS — Your Open Shelf",
   manifest: "/manifest.webmanifest",
 };
@@ -47,7 +49,9 @@ async function CountryBanner({ signedIn }: { signedIn: boolean }) {
               Yes, that&apos;s right
             </button>
           )}
-          <label className="sr-only" htmlFor="banner-country">Country</label>
+          <label className="sr-only" htmlFor="banner-country">
+            Country
+          </label>
           <CountrySelect id="banner-country" defaultValue={suggested} required={false} />
           <button className="btn btn-sm" type="submit">
             {suggested ? "Use selected" : "Save"}
@@ -60,10 +64,10 @@ async function CountryBanner({ signedIn }: { signedIn: boolean }) {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
-  const [unread, wallet, announcements] = await Promise.all([
+  const [unread, credits, announcements] = await Promise.all([
     user ? unreadCount(user.id) : 0,
-    user ? queryOne<{ available: number }>("SELECT available FROM credit_accounts WHERE user_id = $1", [user.id]) : null,
-    query<{ id: string; message: string; level: string }>("SELECT id, message, level FROM announcements WHERE active ORDER BY created_at DESC LIMIT 2"),
+    user ? availableCredits(user.id) : 0,
+    activeAnnouncements(),
   ]);
   const staff = user && can(user.role, "staff.access");
   const flash = (await cookies()).get("yos_flash")?.value;
@@ -71,7 +75,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body>
-        <a href="#main" className="skip-link">Skip to content</a>
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <header className="site-header">
           <div className="container">
             <Link href="/" className="brand" aria-label="YOS — Your Open Shelf, home">
@@ -89,20 +95,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {user ? (
                 <>
                   <Link href="/wallet" className="credit-chip" title="Available credits">
-                    {wallet?.available ?? 0} credit{wallet?.available === 1 ? "" : "s"}
+                    {credits} credit{credits === 1 ? "" : "s"}
                   </Link>
-                  <Link href="/notifications" className="btn btn-ghost btn-sm" aria-label={`Notifications, ${unread} unread`}>
+                  <Link
+                    href="/notifications"
+                    className="btn btn-ghost btn-sm"
+                    aria-label={`Notifications, ${unread} unread`}
+                  >
                     Notifications {unread > 0 && <span className="pill-count">{unread}</span>}
                   </Link>
-                  <Link href="/my/books/new" className="btn btn-primary btn-sm">List a book</Link>
+                  <Link href="/my/books/new" className="btn btn-primary btn-sm">
+                    List a book
+                  </Link>
                   <form action={signOutAction} className="inline-form">
                     <button className="btn btn-ghost btn-sm">Sign out</button>
                   </form>
                 </>
               ) : (
                 <>
-                  <Link href="/signin" className="btn btn-ghost btn-sm">Sign in</Link>
-                  <Link href="/signup" className="btn btn-primary btn-sm">Join YOS</Link>
+                  <Link href="/signin" className="btn btn-ghost btn-sm">
+                    Sign in
+                  </Link>
+                  <Link href="/signup" className="btn btn-primary btn-sm">
+                    Join YOS
+                  </Link>
                 </>
               )}
             </div>
@@ -116,7 +132,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {user && !user.email_verified_at && (
           <div className="banner banner-warning">
             <div className="container">
-              Please verify your email address to list and request books. <Link href="/verify-email">Resend the link</Link>
+              Please verify your email address to list and request books.{" "}
+              <Link href="/verify-email">Resend the link</Link>
             </div>
           </div>
         )}
@@ -129,36 +146,68 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div>
                 <h4>YOS</h4>
                 <p className="small muted">Your Books. New Readers. Endless Stories.</p>
-                <p className="tiny muted">YOS credits have no cash value and can only be used to request books on YOS.</p>
+                <p className="tiny muted">
+                  YOS credits have no cash value and can only be used to request books on YOS.
+                </p>
               </div>
               <div>
                 <h4>Exchange</h4>
                 <ul>
-                  <li><Link href="/explore">Explore books</Link></li>
-                  <li><Link href="/how-it-works">How YOS works</Link></li>
-                  <li><Link href="/credits">Credit system</Link></li>
-                  <li><Link href="/condition-guide">Book condition guide</Link></li>
-                  <li><Link href="/shipping">Countries &amp; shipping</Link></li>
+                  <li>
+                    <Link href="/explore">Explore books</Link>
+                  </li>
+                  <li>
+                    <Link href="/how-it-works">How YOS works</Link>
+                  </li>
+                  <li>
+                    <Link href="/credits">Credit system</Link>
+                  </li>
+                  <li>
+                    <Link href="/condition-guide">Book condition guide</Link>
+                  </li>
+                  <li>
+                    <Link href="/shipping">Countries &amp; shipping</Link>
+                  </li>
                 </ul>
               </div>
               <div>
                 <h4>Community</h4>
                 <ul>
-                  <li><Link href="/about">About YOS</Link></li>
-                  <li><Link href="/trust-safety">Trust &amp; safety</Link></li>
-                  <li><Link href="/membership">Membership</Link></li>
-                  <li><Link href="/help">Help center &amp; FAQ</Link></li>
-                  <li><Link href="/contact">Contact us</Link></li>
+                  <li>
+                    <Link href="/about">About YOS</Link>
+                  </li>
+                  <li>
+                    <Link href="/trust-safety">Trust &amp; safety</Link>
+                  </li>
+                  <li>
+                    <Link href="/membership">Membership</Link>
+                  </li>
+                  <li>
+                    <Link href="/help">Help center &amp; FAQ</Link>
+                  </li>
+                  <li>
+                    <Link href="/contact">Contact us</Link>
+                  </li>
                 </ul>
               </div>
               <div>
                 <h4>Policies</h4>
                 <ul>
-                  <li><Link href="/legal/terms">Terms of Service</Link></li>
-                  <li><Link href="/legal/privacy">Privacy Policy</Link></li>
-                  <li><Link href="/legal/credits">Credit System Terms</Link></li>
-                  <li><Link href="/legal/prohibited-items">Prohibited items</Link></li>
-                  <li><Link href="/legal">All policies</Link></li>
+                  <li>
+                    <Link href="/legal/terms">Terms of Service</Link>
+                  </li>
+                  <li>
+                    <Link href="/legal/privacy">Privacy Policy</Link>
+                  </li>
+                  <li>
+                    <Link href="/legal/credits">Credit System Terms</Link>
+                  </li>
+                  <li>
+                    <Link href="/legal/prohibited-items">Prohibited items</Link>
+                  </li>
+                  <li>
+                    <Link href="/legal">All policies</Link>
+                  </li>
                 </ul>
               </div>
             </div>

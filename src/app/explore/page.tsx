@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { searchListings, type SearchFilters } from "@/server/domain/listings";
-import { query } from "@/server/db";
+import { categories, senderCountries } from "@/server/queries/site";
 import { currentUser } from "@/shared/api/session";
 import { chosenCountry } from "@/shared/api/geo";
 import { countryName } from "@/shared/lib/countries";
@@ -17,7 +17,7 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
   const user = await currentUser();
   const myCountry = user?.country_code ?? (await chosenCountry());
   // Default to books that can reach the viewer; "anywhere" shows the full catalog.
-  const shipsTo = sp.ships === "anywhere" ? undefined : myCountry ?? undefined;
+  const shipsTo = sp.ships === "anywhere" ? undefined : (myCountry ?? undefined);
   const filters: SearchFilters = {
     q: sp.q,
     format: sp.format || undefined,
@@ -30,10 +30,10 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
     sort: sp.sort === "title" ? "title" : sp.sort === "relevance" ? "relevance" : "newest",
     cursor: sp.cursor ?? null,
   };
-  const [results, categories, senderCountries] = await Promise.all([
+  const [results, categoryList, origins] = await Promise.all([
     searchListings(filters),
-    query<{ slug: string; name: string; parent_id: number | null }>("SELECT slug, name, parent_id FROM categories ORDER BY sort"),
-    query<{ origin_country: string }>("SELECT DISTINCT origin_country FROM listings WHERE status IN ('active','reserved')"),
+    categories(),
+    senderCountries(),
   ]);
   const qs = (patch: SP) => {
     const p = new URLSearchParams();
@@ -48,9 +48,17 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
         {myCountry && (
           <div className="small">
             {shipsTo ? (
-              <>Showing books that can ship to <strong>{countryName(myCountry)}</strong> · <Link href={qs({ ships: "anywhere", cursor: undefined })}>Show all</Link></>
+              <>
+                Showing books that can ship to <strong>{countryName(myCountry)}</strong> ·{" "}
+                <Link href={qs({ ships: "anywhere", cursor: undefined })}>Show all</Link>
+              </>
             ) : (
-              <>Showing books from everywhere · <Link href={qs({ ships: undefined, cursor: undefined })}>Only books that ship to {countryName(myCountry)}</Link></>
+              <>
+                Showing books from everywhere ·{" "}
+                <Link href={qs({ ships: undefined, cursor: undefined })}>
+                  Only books that ship to {countryName(myCountry)}
+                </Link>
+              </>
             )}
           </div>
         )}
@@ -60,41 +68,68 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
         <div className="field-row">
           <div className="field" style={{ gridColumn: "1 / -1" }}>
             <label htmlFor="q">Search by title, author, ISBN or keyword</label>
-            <input id="q" name="q" type="search" defaultValue={sp.q} placeholder="e.g. Middlemarch, George Eliot, 9780141439549" />
+            <input
+              id="q"
+              name="q"
+              type="search"
+              defaultValue={sp.q}
+              placeholder="e.g. Middlemarch, George Eliot, 9780141439549"
+            />
           </div>
           <div className="field">
             <label htmlFor="category">Category</label>
             <select id="category" name="category" defaultValue={sp.category ?? ""}>
               <option value="">All categories</option>
-              {categories.map((c) => <option key={c.slug} value={c.slug}>{c.parent_id ? "— " : ""}{c.name}</option>)}
+              {categoryList.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.parent_id ? "— " : ""}
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className="field">
             <label htmlFor="format">Format</label>
             <select id="format" name="format" defaultValue={sp.format ?? ""}>
               <option value="">Any format</option>
-              {Object.entries(FORMATS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {Object.entries(FORMATS).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
             </select>
           </div>
           <div className="field">
             <label htmlFor="language">Language</label>
             <select id="language" name="language" defaultValue={sp.language ?? ""}>
               <option value="">Any language</option>
-              {Object.entries(LANGUAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {Object.entries(LANGUAGES).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
             </select>
           </div>
           <div className="field">
             <label htmlFor="condition">Condition (at least)</label>
             <select id="condition" name="condition" defaultValue={sp.condition ?? ""}>
               <option value="">Any condition</option>
-              {Object.entries(CONDITIONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              {Object.entries(CONDITIONS).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v.label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="field">
             <label htmlFor="from">Sender&apos;s country</label>
             <select id="from" name="from" defaultValue={sp.from ?? ""}>
               <option value="">Anywhere</option>
-              {senderCountries.map((c) => <option key={c.origin_country} value={c.origin_country}>{countryName(c.origin_country)}</option>)}
+              {origins.map((c) => (
+                <option key={c} value={c}>
+                  {countryName(c)}
+                </option>
+              ))}
             </select>
           </div>
           {shipsTo && (
@@ -118,8 +153,12 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
         </div>
         {sp.ships && <input type="hidden" name="ships" value={sp.ships} />}
         <div className="row" style={{ marginTop: 12 }}>
-          <button className="btn btn-primary" type="submit">Search</button>
-          <Link href="/explore" className="btn btn-ghost">Clear filters</Link>
+          <button className="btn btn-primary" type="submit">
+            Search
+          </button>
+          <Link href="/explore" className="btn btn-ghost">
+            Clear filters
+          </Link>
         </div>
       </form>
 
@@ -130,17 +169,28 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
         <Empty>
           <p>No books match those filters yet.</p>
           {user ? (
-            <p>Search the catalog and add a book to your <Link href="/wishlist">wish list</Link> to be told when one is listed.</p>
+            <p>
+              Search the catalog and add a book to your <Link href="/wishlist">wish list</Link> to be told when one is
+              listed.
+            </p>
           ) : (
-            <p><Link href="/signup">Join YOS</Link> to add books to your wish list and be notified when they&apos;re listed.</p>
+            <p>
+              <Link href="/signup">Join YOS</Link> to add books to your wish list and be notified when they&apos;re
+              listed.
+            </p>
           )}
         </Empty>
       ) : (
         <div className="grid-books">
-          {results.rows.map((l) => <BookCard key={l.id} l={l} />)}
+          {results.rows.map((l) => (
+            <BookCard key={l.id} l={l} />
+          ))}
         </div>
       )}
-      <CursorPager nextHref={results.nextCursor ? qs({ cursor: results.nextCursor }) : null} firstHref={sp.cursor ? qs({ cursor: undefined }) : null} />
+      <CursorPager
+        nextHref={results.nextCursor ? qs({ cursor: results.nextCursor }) : null}
+        firstHref={sp.cursor ? qs({ cursor: undefined }) : null}
+      />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { DomainError } from "@/server/errors";
 export async function createTicketAction(_: ActionState, fd: FormData) {
   return run(async () => {
     const u = await currentUser();
-    enforceRateLimit(`ticket:${u?.id ?? await clientIp()}`, 10, 60 * 60_000);
+    enforceRateLimit(`ticket:${u?.id ?? (await clientIp())}`, 10, 60 * 60_000);
     if (str(fd, "website")) throw new DomainError("Something went wrong."); // honeypot for bots
     const id = await createTicket({
       userId: u?.id ?? null,
@@ -21,7 +21,7 @@ export async function createTicketAction(_: ActionState, fd: FormData) {
       body: str(fd, "body"),
     });
     if (u) redirect(`/support/${id}`);
-    return `Thanks — we've received your message (reference #${id.slice(0, 8).toUpperCase()}) and will reply by email.`;
+    return `Thanks, we've received your message (reference #${id.slice(0, 8).toUpperCase()}) and will reply by email.`;
   });
 }
 
@@ -39,7 +39,12 @@ export async function replyTicketAction(ticketId: string, _: ActionState, fd: Fo
   });
 }
 
-export async function reportAction(targetType: "listing" | "member" | "review" | "message", targetId: string, _: ActionState, fd: FormData) {
+export async function reportAction(
+  targetType: "listing" | "member" | "review" | "message",
+  targetId: string,
+  _: ActionState,
+  fd: FormData,
+) {
   return run(async () => {
     const u = await actionUser();
     enforceRateLimit(`report:${u.id}`, 20, 24 * 60 * 60_000);

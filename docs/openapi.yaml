@@ -76,7 +76,11 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { type: object, description: "Profile, addresses, listings, exchanges, credit ledger, reviews and tickets." }
+                  data:
+                    {
+                      type: object,
+                      description: "Profile, addresses, listings, exchanges, credit ledger, reviews and tickets.",
+                    }
         "401": { $ref: "#/components/responses/Problem" }
         "429": { $ref: "#/components/responses/RateLimited" }
   /files/{id}:

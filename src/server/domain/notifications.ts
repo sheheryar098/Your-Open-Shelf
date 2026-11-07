@@ -3,7 +3,7 @@ import { appUrl } from "@/server/config";
 
 /**
  * Notification types. Essential types (transactions, security) are always delivered;
- * the rest respect the member's preferences (§15.4).
+ * the rest respect the member's preferences.
  */
 export const NOTIFICATION_TYPES = {
   request_new: { label: "New request for your book", essential: true },
@@ -55,20 +55,45 @@ export async function notify(db: Db, userId: string, n: NotifyInput) {
   }
   if (wantsEmail) {
     const link = n.link ? `\n\n${appUrl()}${n.link}` : "";
-    const priority = n.type === "security" ? EmailPriority.security : meta.essential ? EmailPriority.transactional : EmailPriority.optional;
-    await queueEmail(db, user.email, n.title, `Hi ${user.display_name},\n\n${n.body ?? n.title}${link}\n\n— YOS, Your Open Shelf`, priority);
+    const priority =
+      n.type === "security"
+        ? EmailPriority.security
+        : meta.essential
+          ? EmailPriority.transactional
+          : EmailPriority.optional;
+    await queueEmail(
+      db,
+      user.email,
+      n.title,
+      `Hi ${user.display_name},\n\n${n.body ?? n.title}${link}\n\nThe YOS team`,
+      priority,
+    );
   }
 }
 
-/** Email priority lanes: security mail is never stuck behind bulk mail (background-jobs skill). */
+/** Email priority lanes, so security mail never waits behind bulk mail. */
 export const EmailPriority = { security: 0, transactional: 1, optional: 2 } as const;
 
 /**
  * Adds an email to the outbox. Call it inside the same transaction as the state change it
  * describes (outbox pattern): the worker only ever sees committed rows.
  */
-export async function queueEmail(db: Db, to: string, subject: string, body: string, priority: number = EmailPriority.transactional) {
-  await query("INSERT INTO email_outbox (to_email, subject, body_text, priority) VALUES ($1, $2, $3, $4)", [to, subject, body, priority], db);
+export async function queueEmail(
+  db: Db,
+  to: string,
+  subject: string,
+  body: string,
+  priority: number = EmailPriority.transactional,
+) {
+  await query(
+    "INSERT INTO email_outbox (to_email, subject, body_text, priority) VALUES ($1, $2, $3, $4)",
+    [to, subject, body, priority],
+    db,
+  );
+}
+
+export async function markAllRead(userId: string) {
+  await query("UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL", [userId]);
 }
 
 export async function unreadCount(userId: string): Promise<number> {

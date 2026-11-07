@@ -4,13 +4,17 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { bool, file, run, str, type ActionState } from "@/shared/api/action";
 import { DomainError } from "@/server/errors";
-import { query, tx } from "@/server/db";
 import { actionUser, endSession } from "@/shared/api/session";
 import { COUNTRY_COOKIE } from "@/shared/api/geo";
-import { NOTIFICATION_TYPES } from "@/server/domain/notifications";
-import { saveUpload } from "@/server/domain/files";
+import { markAllRead, NOTIFICATION_TYPES } from "@/server/domain/notifications";
 import {
-  changePassword, closeAccount, profileSchema, updateNotificationPrefs, updateProfile, updateShippingPreferences,
+  changePassword,
+  closeAccount,
+  profileSchema,
+  setAvatar,
+  updateNotificationPrefs,
+  updateProfile,
+  updateShippingPreferences,
 } from "@/server/domain/users";
 import { addressSchema, deleteAddress, saveAddress } from "@/server/domain/support";
 
@@ -28,12 +32,13 @@ export async function profileAction(_: ActionState, fd: FormData) {
     await updateProfile(u.id, parsed.data);
     const avatar = file(fd, "avatar");
     if (avatar) {
-      await tx(async (c) => {
-        const id = await saveUpload(c, avatar, "avatar", u.id);
-        await c.query("UPDATE users SET avatar_file_id = $2 WHERE id = $1", [u.id, id]);
-      });
+      await setAvatar(u.id, avatar);
     }
-    (await cookies()).set(COUNTRY_COOKIE, parsed.data.country.toUpperCase(), { path: "/", maxAge: 365 * 86400, sameSite: "lax" });
+    (await cookies()).set(COUNTRY_COOKIE, parsed.data.country.toUpperCase(), {
+      path: "/",
+      maxAge: 365 * 86400,
+      sameSite: "lax",
+    });
     return "Profile saved.";
   });
 }
@@ -117,6 +122,6 @@ export async function closeAccountAction(_: ActionState, fd: FormData) {
 export async function markAllReadAction(_: ActionState) {
   return run(async () => {
     const u = await actionUser();
-    await query("UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL", [u.id]);
+    await markAllRead(u.id);
   });
 }

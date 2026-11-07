@@ -1,11 +1,21 @@
 export function fmtDate(d: Date | string | null | undefined, tz = "UTC", locale = "en-GB"): string {
   if (!d) return "";
-  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", timeZone: tz }).format(new Date(d));
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", timeZone: tz }).format(
+    new Date(d),
+  );
 }
 
 export function fmtDateTime(d: Date | string | null | undefined, tz = "UTC", locale = "en-GB"): string {
   if (!d) return "";
-  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: tz, timeZoneName: "short" }).format(new Date(d));
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: tz,
+    timeZoneName: "short",
+  }).format(new Date(d));
 }
 
 export function relative(d: Date | string | null | undefined, from = new Date()): string {

@@ -20,13 +20,27 @@ export type Permission =
   | "audit.view";
 
 const MODERATOR: Permission[] = [
-  "staff.access", "members.view", "members.restrict", "listings.moderate", "exchanges.view",
-  "disputes.manage", "reports.manage", "support.manage", "credits.view",
+  "staff.access",
+  "members.view",
+  "members.restrict",
+  "listings.moderate",
+  "exchanges.view",
+  "disputes.manage",
+  "reports.manage",
+  "support.manage",
+  "credits.view",
 ];
 
 const ADMIN: Permission[] = [
-  ...MODERATOR, "members.suspend", "members.roles", "exchanges.intervene", "credits.adjust",
-  "routes.manage", "content.manage", "analytics.view", "audit.view",
+  ...MODERATOR,
+  "members.suspend",
+  "members.roles",
+  "exchanges.intervene",
+  "credits.adjust",
+  "routes.manage",
+  "content.manage",
+  "analytics.view",
+  "audit.view",
 ];
 
 const MATRIX: Record<Role, Set<Permission>> = {

@@ -17,7 +17,11 @@ export default async function SettingsLayout({ children }: { children: React.Rea
       <h1>Settings</h1>
       <div className="admin-shell">
         <nav className="side-nav" aria-label="Settings">
-          {LINKS.map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}
+          {LINKS.map(([href, label]) => (
+            <Link key={href} href={href}>
+              {label}
+            </Link>
+          ))}
         </nav>
         <div className="stack-lg">{children}</div>
       </div>

@@ -1,6 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closePool, pool, tx } from "@/server/db";
-import { createListing, publishListing, searchListings, setOwnListingStatus, moderateListing, addToWishlist } from "@/server/domain/listings";
+import {
+  createListing,
+  publishListing,
+  searchListings,
+  setOwnListingStatus,
+  moderateListing,
+  addToWishlist,
+} from "@/server/domain/listings";
 import { authenticate, registerUser, verifyEmail, setAccountStatus } from "@/server/domain/users";
 import { updateCountry, upsertRoute, getRoute } from "@/server/domain/routes";
 import { toIsbn13 } from "@/shared/lib/isbn";
@@ -13,8 +20,15 @@ beforeEach(resetData);
 afterAll(closePool);
 
 const copy = {
-  format: "paperback", language: "en", condition: "good", conditionNotes: "Light wear on the corners.", editionNotes: "",
-  categoryId: null, weightGrams: null, shipScope: "domestic" as const, shipCountries: [],
+  format: "paperback",
+  language: "en",
+  condition: "good",
+  conditionNotes: "Light wear on the corners.",
+  editionNotes: "",
+  categoryId: null,
+  weightGrams: null,
+  shipScope: "domestic" as const,
+  shipCountries: [],
 };
 
 describe("listings", () => {
@@ -33,7 +47,9 @@ describe("listings", () => {
 
   it("rejects non-image uploads by content, not by name", async () => {
     const m = await makeUser();
-    await expect(tx((c) => saveBuffer(c, Buffer.from("<script>alert(1)</script>"), "listing_photo", m.id))).rejects.toThrow(/JPEG, PNG or WebP/);
+    await expect(
+      tx((c) => saveBuffer(c, Buffer.from("<script>alert(1)</script>"), "listing_photo", m.id)),
+    ).rejects.toThrow(/JPEG, PNG or WebP/);
   });
 
   it("supports pause and remove, and flags duplicate copies", async () => {
@@ -61,7 +77,9 @@ describe("listings", () => {
     await createListing(b.id, { input: { isbn: toIsbn13(isbn)!, title: "Some Book (typo)", authors: ["X"] } }, copy);
     const n = await pool().query("SELECT count(*)::int AS n FROM books");
     expect(n.rows[0].n).toBe(1);
-    await expect(createListing(a.id, { input: { isbn: "1234567890", title: "Bad", authors: ["X"] } }, copy)).rejects.toThrow(/ISBN/);
+    await expect(
+      createListing(a.id, { input: { isbn: "1234567890", title: "Bad", authors: ["X"] } }, copy),
+    ).rejects.toThrow(/ISBN/);
   });
 
   it("searches by title/author and filters to books that can ship to the viewer", async () => {
@@ -95,7 +113,10 @@ describe("listings", () => {
       await c.query("INSERT INTO listing_photos (listing_id, file_id) VALUES ($1, $2)", [l2, f]);
     });
     await publishListing(owner.id, l2, { confirmPossession: true });
-    const notes = await pool().query("SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND type = 'wishlist_match'", [wisher.id]);
+    const notes = await pool().query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND type = 'wishlist_match'",
+      [wisher.id],
+    );
     expect(notes.rows[0].n).toBe(1);
   });
 });
@@ -103,10 +124,27 @@ describe("listings", () => {
 describe("accounts", () => {
   it("registers, verifies email and signs in; suspended members can't sign in", async () => {
     const email = `new-${Date.now()}@test.yos`;
-    const id = await registerUser({ displayName: "Newbie", email, password: "correct-horse-battery", country: "GB", acceptTerms: "on", confirmAge: "on" });
-    await expect(registerUser({ displayName: "Dup", email: email.toUpperCase(), password: "correct-horse-battery", country: "GB", acceptTerms: "on", confirmAge: "on" }))
-      .rejects.toThrow(/already exists/);
-    const mail = await pool().query<{ body_text: string }>("SELECT body_text FROM email_outbox WHERE to_email = $1", [email]);
+    const id = await registerUser({
+      displayName: "Newbie",
+      email,
+      password: "correct-horse-battery",
+      country: "GB",
+      acceptTerms: "on",
+      confirmAge: "on",
+    });
+    await expect(
+      registerUser({
+        displayName: "Dup",
+        email: email.toUpperCase(),
+        password: "correct-horse-battery",
+        country: "GB",
+        acceptTerms: "on",
+        confirmAge: "on",
+      }),
+    ).rejects.toThrow(/already exists/);
+    const mail = await pool().query<{ body_text: string }>("SELECT body_text FROM email_outbox WHERE to_email = $1", [
+      email,
+    ]);
     const token = mail.rows[0].body_text.match(/token=([\w-]+)/)![1];
     expect(await verifyEmail(token)).toBe(id);
     expect(await verifyEmail(token)).toBeNull(); // single use
@@ -123,8 +161,13 @@ describe("countries and routes", () => {
     const r = (await getRoute("GB", "IE"))!;
     await upsertRoute(admin, { ...r, enabled: false }, "Carrier strike — pausing route");
     expect((await getRoute("GB", "IE"))!.enabled).toBe(false);
-    await expect(upsertRoute(admin, { ...r, enabled: true, customs_notice: null, customs_required: false }, "Re-enable without customs"))
-      .rejects.toThrow(/customs/);
+    await expect(
+      upsertRoute(
+        admin,
+        { ...r, enabled: true, customs_notice: null, customs_required: false },
+        "Re-enable without customs",
+      ),
+    ).rejects.toThrow(/customs/);
     await updateCountry(admin, "FR", { status: "limited" }, "Pilot for Paris book clubs");
     const logs = await pool().query("SELECT action FROM admin_audit_logs ORDER BY id");
     expect(logs.rows.map((l) => l.action)).toEqual(["route.upsert", "country.update"]);

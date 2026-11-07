@@ -50,7 +50,7 @@ Scheduled work is split into small jobs in `src/server/jobs/runner.ts`: two emai
 
 Member pages also trigger them opportunistically, at most once a minute per instance.
 
-These rules come from the background-jobs skill:
+How the jobs behave:
 
 - **Safe to repeat.** Each item is handled in its own transaction under `FOR UPDATE SKIP LOCKED` and re-checks its state first, so running an item twice does no harm. Each job also holds a Postgres advisory lock, so only one instance runs it at a time.
 - **Poison items can't block the queue.** A failing item is retried on later runs. After 5 failures it's parked in `job_failures` and skipped, and staff can retry or dismiss it under **Admin → Jobs & queues**.
@@ -59,11 +59,11 @@ These rules come from the background-jobs skill:
 
 ## HTTP API
 
-`docs/openapi.yaml` (OpenAPI 3.1) documents the endpoints. It follows the api-design skill: everything is versioned under `/api/v1`, success responses are wrapped in `{ data }`, errors use RFC 9457 `application/problem+json`, and 429s include `Retry-After`. The member-facing site uses Server Actions, which are not a public API. Request idempotency keys are matched against the request they were first used for: replaying the same request returns the original result, and reusing a key for a different request is refused. Catalog search and wallet history use cursor pagination.
+`docs/openapi.yaml` (OpenAPI 3.1) documents the endpoints. Everything is versioned under `/api/v1`, success responses are wrapped in `{ data }`, errors use RFC 9457 `application/problem+json`, and 429s include `Retry-After`. The member-facing site uses Server Actions, which are not a public API. Request idempotency keys are matched against the request they were first used for: replaying the same request returns the original result, and reusing a key for a different request is refused. Catalog search and wallet history use cursor pagination.
 
 ## Caching
 
-Following the caching skill, the only cache is in front of a slow, rate-limited upstream: the optional Open Library ISBN lookup (`src/server/cache.ts`). It is cache-aside in Postgres with versioned keys (`isbn:v1:…`), a 7-day TTL plus jitter, 1-hour negative caching, no caching of errors, single-flight for concurrent misses, and hit/miss/error counters shown in the admin area. Country and route lookups are indexed primary-key reads and aren't cached. Request-time eligibility checks always read the database.
+The only cache is in front of a slow, rate-limited upstream: the optional Open Library ISBN lookup (`src/server/cache.ts`). It is cache-aside in Postgres with versioned keys (`isbn:v1:…`), a 7-day TTL plus jitter, 1-hour negative caching, no caching of errors, single-flight for concurrent misses, and hit/miss/error counters shown in the admin area. Country and route lookups are indexed primary-key reads and aren't cached. Request-time eligibility checks always read the database.
 
 ## Architecture
 
@@ -83,14 +83,16 @@ src/
     lib/          Framework-free helpers (countries, vocabularies, ISBN, formatting)
   server/       Backend. No React or Next.js imports (enforced)
     db.ts, clock.ts, config.ts, rbac.ts, rate-limit.ts, http.ts (outbound client), cache.ts
-    domain/       credits, exchanges, listings, routes, users, support, catalog, files, analytics, audit, notifications
+    domain/       credits, listings, routes, users, support, catalog, files, analytics, audit, notifications, announcements
+      exchanges/    core (state machine), request, response, shipping, completion, disputes, staff, conversation, jobs, queries
+    queries/      read models for pages: admin, member, site
     jobs/         runner (locks, dead letters, health), email (outbox delivery), types
 db/migrations/  SQL schema
 scripts/        migrate, seed, jobs, check-bundle
 tests/          Vitest suites against a real PostgreSQL database
 ```
 
-`npm run lint` enforces the import rules. `bundle-budget.json` sets a brotli budget for each route's client JavaScript, and `npm run bundle:check` fails the build when a route exceeds it. CI (`.github/workflows/ci.yml`) runs lint, tests against PostgreSQL, the build and the bundle budget.
+`npm run lint` checks formatting (Prettier), types and the import rules, including that only `src/server` imports the database client. `bundle-budget.json` sets a brotli budget for each route's client JavaScript, and `npm run bundle:check` fails the build when a route exceeds it. CI (`.github/workflows/ci.yml`) runs lint, tests against PostgreSQL, the build and the bundle budget.
 
 ### Credit integrity (§9, §18.5)
 
@@ -120,7 +122,7 @@ requested ──accept──▶ accepted ──ship──▶ shipped ──recip
    └─requester cancels                                                         disputed ──▶ completed | refunded
 ```
 
-The server validates every transition against the table in `src/server/domain/exchanges.ts`. Members can't mark a parcel as carrier-delivered. Only the recipient's own confirmation, a staff action, or the auto-confirm rule for tracked parcels can move an exchange to delivered.
+The server validates every transition against the table in `src/server/domain/exchanges/core.ts`. Members can't mark a parcel as carrier-delivered. Only the recipient's own confirmation, a staff action, or the auto-confirm rule for tracked parcels can move an exchange to delivered.
 
 ### Countries and routes (§4)
 

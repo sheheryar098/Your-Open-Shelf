@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { query } from "@/server/db";
+import { recentOutboxEmails } from "@/server/queries/site";
 import { devOutboxEnabled } from "@/server/config";
 import { fmtDateTime } from "@/shared/lib/format";
 
@@ -8,9 +8,7 @@ export const metadata = { title: "Development outbox", robots: { index: false } 
 /** Development-only view of queued email so verification and reset links can be used locally. */
 export default async function Outbox() {
   if (!devOutboxEnabled()) notFound();
-  const mails = await query<{ id: string; to_email: string; subject: string; body_text: string; created_at: Date; status: string }>(
-    "SELECT * FROM email_outbox ORDER BY created_at DESC LIMIT 50",
-  );
+  const mails = await recentOutboxEmails();
   return (
     <div className="container page">
       <h1>Development outbox</h1>
@@ -20,7 +18,9 @@ export default async function Outbox() {
           <div key={m.id} className="card card-flat">
             <div className="row-between">
               <strong>{m.subject}</strong>
-              <span className="small muted">to {m.to_email} · {fmtDateTime(m.created_at)}</span>
+              <span className="small muted">
+                to {m.to_email} · {fmtDateTime(m.created_at)}
+              </span>
             </div>
             <pre className="small" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
               {linkify(m.body_text)}
@@ -34,6 +34,12 @@ export default async function Outbox() {
 
 function linkify(text: string) {
   return text.split(/(https?:\/\/\S+)/g).map((part, i) =>
-    /^https?:\/\//.test(part) ? <a key={i} href={part.replace(/^https?:\/\/[^/]+/, "")}>{part}</a> : part,
+    /^https?:\/\//.test(part) ? (
+      <a key={i} href={part.replace(/^https?:\/\/[^/]+/, "")}>
+        {part}
+      </a>
+    ) : (
+      part
+    ),
   );
 }

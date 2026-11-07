@@ -14,18 +14,38 @@ export default async function SupportList() {
     <div className="container narrow page">
       <div className="row-between">
         <h1 className="mb-0">Support tickets</h1>
-        <Link href="/support/new" className="btn btn-primary">New ticket</Link>
+        <Link href="/support/new" className="btn btn-primary">
+          New ticket
+        </Link>
       </div>
-      <p className="muted">We aim to acknowledge standard tickets within 1 business day. <Link href="/help">Browse the help center</Link></p>
-      {tickets.length === 0 ? <Empty>No tickets yet.</Empty> : (
+      <p className="muted">
+        We aim to acknowledge standard tickets within 1 business day. <Link href="/help">Browse the help center</Link>
+      </p>
+      {tickets.length === 0 ? (
+        <Empty>No tickets yet.</Empty>
+      ) : (
         <div className="card">
           {tickets.map((t) => (
             <div key={t.id} className="list-item">
               <div className="body">
-                <Link href={`/support/${t.id}`} className="title">{t.subject}</Link>
-                <div className="small muted">#{shortId(t.id)} · {TICKET_CATEGORIES[t.category]} · updated {fmtDate(t.updated_at)}</div>
+                <Link href={`/support/${t.id}`} className="title">
+                  {t.subject}
+                </Link>
+                <div className="small muted">
+                  #{shortId(t.id)} · {TICKET_CATEGORIES[t.category]} · updated {fmtDate(t.updated_at)}
+                </div>
               </div>
-              <Badge tone={t.status === "awaiting_member" ? "warn" : t.status === "resolved" || t.status === "closed" ? "ok" : "info"}>{t.status.replace("_", " ")}</Badge>
+              <Badge
+                tone={
+                  t.status === "awaiting_member"
+                    ? "warn"
+                    : t.status === "resolved" || t.status === "closed"
+                      ? "ok"
+                      : "info"
+                }
+              >
+                {t.status.replace("_", " ")}
+              </Badge>
             </div>
           ))}
         </div>

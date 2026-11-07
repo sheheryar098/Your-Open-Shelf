@@ -1,8 +1,8 @@
--- YOS — Your Open Shelf: initial schema
+-- Initial schema
 -- Conventions: timestamps are timestamptz (UTC); ids are uuid unless the table is an append-only log.
 
 -- ---------------------------------------------------------------------------
--- Countries & shipping routes (blueprint §4.3)
+-- Countries and shipping routes
 -- ---------------------------------------------------------------------------
 CREATE TABLE countries (
   code              char(2) PRIMARY KEY,
@@ -105,7 +105,7 @@ CREATE TABLE files (
 );
 
 -- ---------------------------------------------------------------------------
--- Private addresses (§4.2) — never joined into public queries
+-- Private addresses. Never joined into public queries.
 -- ---------------------------------------------------------------------------
 CREATE TABLE addresses (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -126,7 +126,7 @@ CREATE TABLE addresses (
 CREATE INDEX addresses_user ON addresses (user_id) WHERE deleted_at IS NULL;
 
 -- ---------------------------------------------------------------------------
--- Catalog (shared metadata) vs listings (member-owned copies) (§7)
+-- Catalog (shared metadata) and listings (member-owned copies)
 -- ---------------------------------------------------------------------------
 CREATE TABLE categories (
   id        serial PRIMARY KEY,
@@ -185,7 +185,7 @@ CREATE TABLE listings (
   origin_country        char(2) NOT NULL REFERENCES countries(code),
   ship_scope            text NOT NULL DEFAULT 'domestic' CHECK (ship_scope IN ('domestic', 'international')),
   ship_countries        char(2)[] NOT NULL DEFAULT '{}',
-  credit_cost           int NOT NULL DEFAULT 1 CHECK (credit_cost = 1),  -- one credit per standard book (§9.2)
+  credit_cost           int NOT NULL DEFAULT 1 CHECK (credit_cost = 1),  -- one credit per standard book
   status                text NOT NULL DEFAULT 'draft' CHECK (status IN (
                           'draft', 'active', 'reserved', 'unavailable', 'paused', 'exchanged', 'removed', 'under_review')),
   status_reason         text,
@@ -209,7 +209,7 @@ CREATE TABLE listing_photos (
 CREATE INDEX listing_photos_listing ON listing_photos (listing_id, position);
 
 -- ---------------------------------------------------------------------------
--- Exchanges: a request IS an exchange in the "requested" state (§10)
+-- Exchanges. A request is an exchange in the "requested" state.
 -- ---------------------------------------------------------------------------
 CREATE TABLE exchanges (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -246,7 +246,7 @@ CREATE TABLE exchanges (
   updated_at          timestamptz NOT NULL DEFAULT now(),
   CHECK (requester_id <> sender_id)
 );
--- A listing copy can have at most one live reservation at a time (§19).
+-- A copy can have at most one live reservation at a time.
 CREATE UNIQUE INDEX exchanges_one_live_per_listing ON exchanges (listing_id)
   WHERE status IN ('requested', 'accepted', 'shipped', 'delivered', 'disputed');
 CREATE INDEX exchanges_requester ON exchanges (requester_id, status);
@@ -305,7 +305,7 @@ CREATE TABLE messages (
 CREATE INDEX messages_exchange ON messages (exchange_id, created_at);
 
 -- ---------------------------------------------------------------------------
--- Credits: summary table + append-only ledger (§9.5, §9.6, §18.5)
+-- Credits: summary table plus append-only ledger
 -- ---------------------------------------------------------------------------
 CREATE TABLE credit_accounts (
   user_id     uuid PRIMARY KEY REFERENCES users(id),
@@ -400,7 +400,7 @@ CREATE TABLE email_outbox (
 CREATE INDEX email_outbox_status ON email_outbox (status, created_at);
 
 -- ---------------------------------------------------------------------------
--- Trust & safety: disputes, reports, support (§12, §16.6, §17)
+-- Trust and safety: disputes, reports, support
 -- ---------------------------------------------------------------------------
 CREATE TABLE disputes (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),

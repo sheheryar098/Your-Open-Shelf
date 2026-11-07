@@ -1,5 +1,4 @@
--- Background-jobs hardening (background-jobs skill):
--- per-job run records, a dead-letter table for poison items, and an email outbox with
+-- Job run records, a dead-letter table for poison items, and an email outbox with
 -- priority lanes, exponential backoff and a terminal "dead" state.
 
 DROP TABLE job_runs;

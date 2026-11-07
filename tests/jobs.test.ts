@@ -1,11 +1,18 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closePool, pool } from "@/server/db";
 import { addDays, setNow } from "@/server/clock";
-import { requestBook, acceptRequest } from "@/server/domain/exchanges";
+import { requestBook } from "@/server/domain/exchanges/request";
+import { acceptRequest } from "@/server/domain/exchanges/response";
 import { reconcile } from "@/server/domain/credits";
 import { queueEmail, EmailPriority } from "@/server/domain/notifications";
 import { MAX_ITEM_ATTEMPTS, jobHealth, runJob, runJobs } from "@/server/jobs/runner";
-import { EMAIL_MAX_ATTEMPTS, EmailSendError, consoleTransport, emailBackoffMs, setEmailTransport } from "@/server/jobs/email";
+import {
+  EMAIL_MAX_ATTEMPTS,
+  EmailSendError,
+  consoleTransport,
+  emailBackoffMs,
+  setEmailTransport,
+} from "@/server/jobs/email";
 import { exchangeStatus, key, makeListing, makeUser, resetData } from "./helpers";
 
 beforeEach(resetData);
@@ -15,7 +22,12 @@ afterAll(closePool);
 async function pendingRequest() {
   const sender = await makeUser();
   const req = await makeUser({ credits: 1 });
-  const id = await requestBook({ requesterId: req.id, listingId: await makeListing(sender.id), addressId: req.addressId, requestKey: key() });
+  const id = await requestBook({
+    requesterId: req.id,
+    listingId: await makeListing(sender.id),
+    addressId: req.addressId,
+    requestKey: key(),
+  });
   return { id, req, sender };
 }
 
@@ -51,7 +63,9 @@ describe("scheduled exchange jobs", () => {
     await Promise.all([runJobs(), runJobs(), runJobs()]);
     expect(await exchangeStatus(a.id)).toBe("expired");
     expect(await exchangeStatus(b.id)).toBe("cancelled");
-    const releases = await pool().query("SELECT count(*)::int AS n FROM credit_ledger WHERE event_type = 'credit_released'");
+    const releases = await pool().query(
+      "SELECT count(*)::int AS n FROM credit_ledger WHERE event_type = 'credit_released'",
+    );
     expect(releases.rows[0].n).toBe(2);
     expect(await reconcile()).toEqual([]);
   });
@@ -61,8 +75,24 @@ describe("scheduled exchange jobs", () => {
     setNow(addDays(new Date(), 2.5)); // within 24h of the 3-day response deadline
     await runJobs();
     await runJobs();
-    const n = await pool().query("SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND type = 'dispatch_reminder'", [sender.id]);
+    const n = await pool().query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND type = 'dispatch_reminder'",
+      [sender.id],
+    );
     expect(n.rows[0].n).toBe(1);
+  });
+});
+
+describe("deadline reminders", () => {
+  it("are not sent once the deadline has already passed", async () => {
+    const { sender } = await pendingRequest();
+    setNow(addDays(new Date(), 4)); // the 3-day response window is over
+    await runJob("exchanges.respond-reminders");
+    const n = await pool().query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND type = 'dispatch_reminder'",
+      [sender.id],
+    );
+    expect(n.rows[0].n).toBe(0);
   });
 });
 
@@ -77,32 +107,50 @@ describe("email outbox", () => {
       },
     });
     await runJob("email.deliver");
-    const rows = (await pool().query("SELECT to_email, status, attempts, next_attempt_at > now() AS later FROM email_outbox ORDER BY to_email")).rows;
+    const rows = (
+      await pool().query(
+        "SELECT to_email, status, attempts, next_attempt_at > now() AS later FROM email_outbox ORDER BY to_email",
+      )
+    ).rows;
     expect(rows).toEqual([
       { to_email: "flaky@test.yos", status: "queued", attempts: 1, later: true },
       { to_email: "invalid@test.yos", status: "dead", attempts: 1, later: true },
     ]);
     // Not retried before its backoff elapses.
     await runJob("email.deliver");
-    expect((await pool().query("SELECT attempts FROM email_outbox WHERE to_email = 'flaky@test.yos'")).rows[0].attempts).toBe(1);
+    expect(
+      (await pool().query("SELECT attempts FROM email_outbox WHERE to_email = 'flaky@test.yos'")).rows[0].attempts,
+    ).toBe(1);
     expect((await jobHealth()).deadEmails).toBe(1);
   });
 
   it("gives up after the attempt limit", async () => {
     await queueEmail(pool(), "down@test.yos", "Down", "body");
-    setEmailTransport({ async send() { throw new Error("provider unavailable"); } });
+    setEmailTransport({
+      async send() {
+        throw new Error("provider unavailable");
+      },
+    });
     for (let i = 0; i < EMAIL_MAX_ATTEMPTS; i++) {
       await pool().query("UPDATE email_outbox SET next_attempt_at = now() - interval '1 second'");
       await runJob("email.deliver");
     }
-    expect((await pool().query("SELECT status, attempts FROM email_outbox")).rows[0]).toEqual({ status: "dead", attempts: EMAIL_MAX_ATTEMPTS });
+    expect((await pool().query("SELECT status, attempts FROM email_outbox")).rows[0]).toEqual({
+      status: "dead",
+      attempts: EMAIL_MAX_ATTEMPTS,
+    });
   });
 
   it("delivers security mail in its own lane", async () => {
     await queueEmail(pool(), "bulk@test.yos", "Wish-list match", "body", EmailPriority.optional);
     await queueEmail(pool(), "reset@test.yos", "Reset your password", "body", EmailPriority.security);
     const sent: string[] = [];
-    setEmailTransport({ async send(m) { sent.push(m.to); return { messageId: m.idempotencyKey }; } });
+    setEmailTransport({
+      async send(m) {
+        sent.push(m.to);
+        return { messageId: m.idempotencyKey };
+      },
+    });
     await runJob("email.deliver-priority");
     expect(sent).toEqual(["reset@test.yos"]);
   });

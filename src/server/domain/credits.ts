@@ -5,7 +5,7 @@ import { audit, requireReason } from "./audit";
 import { notify } from "./notifications";
 
 /**
- * YOS credit ledger (§9, §18.5).
+ * Credit ledger.
  *
  * Every movement is an append-only ledger row. `credit_accounts` is a summary kept in the
  * same transaction under a row lock, with CHECK constraints that make a negative balance
@@ -83,15 +83,23 @@ export async function postLedgerEvent(c: PoolClient, e: PostInput): Promise<{ en
   }
   const account = await lockAccount(c, e.userId);
 
-  const existing = await c.query<LedgerEntry>("SELECT * FROM credit_ledger WHERE idempotency_key = $1", [e.idempotencyKey]);
+  const existing = await c.query<LedgerEntry>("SELECT * FROM credit_ledger WHERE idempotency_key = $1", [
+    e.idempotencyKey,
+  ]);
   if (existing.rows[0]) {
     const prev = existing.rows[0];
     // api-design: a replayed key must describe the same operation, otherwise refuse it.
     const same =
-      prev.user_id === e.userId && prev.event_type === e.type && prev.available_delta === e.availableDelta &&
-      prev.reserved_delta === e.reservedDelta && (prev.exchange_id ?? null) === (e.exchangeId ?? null);
+      prev.user_id === e.userId &&
+      prev.event_type === e.type &&
+      prev.available_delta === e.availableDelta &&
+      prev.reserved_delta === e.reservedDelta &&
+      (prev.exchange_id ?? null) === (e.exchangeId ?? null);
     if (!same) {
-      throw new DomainError("This operation key was already used for a different credit change. Reload the page and try again.", "idempotency_mismatch");
+      throw new DomainError(
+        "This operation key was already used for a different credit change. Reload the page and try again.",
+        "idempotency_mismatch",
+      );
     }
     return { entry: prev, created: false };
   }
@@ -107,14 +115,23 @@ export async function postLedgerEvent(c: PoolClient, e: PostInput): Promise<{ en
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
     [
-      e.userId, e.type, e.availableDelta, e.reservedDelta, e.exchangeId ?? null, e.reason,
-      e.actorType, e.actorId ?? null, e.idempotencyKey, e.reversesId ?? null,
+      e.userId,
+      e.type,
+      e.availableDelta,
+      e.reservedDelta,
+      e.exchangeId ?? null,
+      e.reason,
+      e.actorType,
+      e.actorId ?? null,
+      e.idempotencyKey,
+      e.reversesId ?? null,
     ],
   );
-  await c.query(
-    "UPDATE credit_accounts SET available = $2, reserved = $3, updated_at = now() WHERE user_id = $1",
-    [e.userId, available, reserved],
-  );
+  await c.query("UPDATE credit_accounts SET available = $2, reserved = $3, updated_at = now() WHERE user_id = $1", [
+    e.userId,
+    available,
+    reserved,
+  ]);
   return { entry: ins.rows[0], created: true };
 }
 
@@ -124,22 +141,49 @@ export async function postLedgerEvent(c: PoolClient, e: PostInput): Promise<{ en
 
 export function reserveForExchange(c: PoolClient, userId: string, exchangeId: string, amount: number) {
   return postLedgerEvent(c, {
-    userId, type: "credit_reserved", availableDelta: -amount, reservedDelta: amount, exchangeId,
-    reason: "Reserved for book request", actorType: "member", actorId: userId, idempotencyKey: `reserve:${exchangeId}`,
+    userId,
+    type: "credit_reserved",
+    availableDelta: -amount,
+    reservedDelta: amount,
+    exchangeId,
+    reason: "Reserved for book request",
+    actorType: "member",
+    actorId: userId,
+    idempotencyKey: `reserve:${exchangeId}`,
   });
 }
 
 export function releaseForExchange(c: PoolClient, userId: string, exchangeId: string, amount: number, reason: string) {
   return postLedgerEvent(c, {
-    userId, type: "credit_released", availableDelta: amount, reservedDelta: -amount, exchangeId,
-    reason, actorType: "system", idempotencyKey: `release:${exchangeId}`,
+    userId,
+    type: "credit_released",
+    availableDelta: amount,
+    reservedDelta: -amount,
+    exchangeId,
+    reason,
+    actorType: "system",
+    idempotencyKey: `release:${exchangeId}`,
   });
 }
 
-export function refundForExchange(c: PoolClient, userId: string, exchangeId: string, amount: number, reason: string, actorId: string) {
+export function refundForExchange(
+  c: PoolClient,
+  userId: string,
+  exchangeId: string,
+  amount: number,
+  reason: string,
+  actorId: string,
+) {
   return postLedgerEvent(c, {
-    userId, type: "credit_refunded", availableDelta: amount, reservedDelta: -amount, exchangeId,
-    reason, actorType: "admin", actorId, idempotencyKey: `refund:${exchangeId}`,
+    userId,
+    type: "credit_refunded",
+    availableDelta: amount,
+    reservedDelta: -amount,
+    exchangeId,
+    reason,
+    actorType: "admin",
+    actorId,
+    idempotencyKey: `refund:${exchangeId}`,
   });
 }
 
@@ -151,19 +195,32 @@ export async function settleExchange(
   // Lock both accounts in a stable order so concurrent settlements can't deadlock.
   for (const id of [ex.requester_id, ex.sender_id].sort()) await lockAccount(c, id);
   await postLedgerEvent(c, {
-    userId: ex.requester_id, type: "credit_spent", availableDelta: 0, reservedDelta: -ex.credit_cost, exchangeId: ex.id,
-    reason: "Exchange completed — credit spent", actorType: actor.type, actorId: actor.id, idempotencyKey: `spend:${ex.id}`,
+    userId: ex.requester_id,
+    type: "credit_spent",
+    availableDelta: 0,
+    reservedDelta: -ex.credit_cost,
+    exchangeId: ex.id,
+    reason: "Exchange completed, credit spent",
+    actorType: actor.type,
+    actorId: actor.id,
+    idempotencyKey: `spend:${ex.id}`,
   });
   // Awarded exactly once per exchange: the idempotency key is unique in the ledger.
   return postLedgerEvent(c, {
-    userId: ex.sender_id, type: "credit_earned", availableDelta: ex.credit_cost, reservedDelta: 0, exchangeId: ex.id,
-    reason: "Exchange completed — credit earned for sending a book", actorType: actor.type, actorId: actor.id,
+    userId: ex.sender_id,
+    type: "credit_earned",
+    availableDelta: ex.credit_cost,
+    reservedDelta: 0,
+    exchangeId: ex.id,
+    reason: "Exchange completed, credit earned for sending a book",
+    actorType: actor.type,
+    actorId: actor.id,
     idempotencyKey: `earn:${ex.id}`,
   });
 }
 
 // ---------------------------------------------------------------------------
-// Staff operations (§16.4) — always with a reason and an audit record
+// Staff operations. Each one needs a reason and writes an audit record.
 // ---------------------------------------------------------------------------
 
 export async function adminAdjust(input: {
@@ -180,18 +237,31 @@ export async function adminAdjust(input: {
   }
   return tx(async (c) => {
     const { entry, created } = await postLedgerEvent(c, {
-      userId: input.userId, type: "credit_admin_adjustment", availableDelta: input.amount, reservedDelta: 0,
-      exchangeId: input.exchangeId ?? null, reason, actorType: "admin", actorId: input.adminId,
+      userId: input.userId,
+      type: "credit_admin_adjustment",
+      availableDelta: input.amount,
+      reservedDelta: 0,
+      exchangeId: input.exchangeId ?? null,
+      reason,
+      actorType: "admin",
+      actorId: input.adminId,
       idempotencyKey: `adjust:${input.idempotencyKey}`,
     });
     if (created) {
       await audit(c, {
-        actorId: input.adminId, action: "credit.adjust", targetType: "user", targetId: input.userId, reason,
+        actorId: input.adminId,
+        action: "credit.adjust",
+        targetType: "user",
+        targetId: input.userId,
+        reason,
         metadata: { amount: input.amount, ledgerId: entry.id, exchangeId: input.exchangeId ?? null },
       });
       await notify(c, input.userId, {
         type: "credit",
-        title: input.amount > 0 ? `YOS added ${input.amount} credit${input.amount === 1 ? "" : "s"} to your wallet` : `YOS removed ${-input.amount} credit${input.amount === -1 ? "" : "s"} from your wallet`,
+        title:
+          input.amount > 0
+            ? `YOS added ${input.amount} credit${input.amount === 1 ? "" : "s"} to your wallet`
+            : `YOS removed ${-input.amount} credit${input.amount === -1 ? "" : "s"} from your wallet`,
         body: `Reason: ${reason}`,
         link: "/wallet",
       });
@@ -210,16 +280,32 @@ export async function reverseEntry(input: { adminId: string; ledgerId: string; r
       throw new DomainError("Only earned credits and staff adjustments can be reversed directly.");
     }
     const { entry, created } = await postLedgerEvent(c, {
-      userId: orig.user_id, type: "credit_reversed", availableDelta: -orig.available_delta, reservedDelta: -orig.reserved_delta,
-      exchangeId: orig.exchange_id, reason, actorType: "admin", actorId: input.adminId,
-      idempotencyKey: `reverse:${orig.id}`, reversesId: orig.id,
+      userId: orig.user_id,
+      type: "credit_reversed",
+      availableDelta: -orig.available_delta,
+      reservedDelta: -orig.reserved_delta,
+      exchangeId: orig.exchange_id,
+      reason,
+      actorType: "admin",
+      actorId: input.adminId,
+      idempotencyKey: `reverse:${orig.id}`,
+      reversesId: orig.id,
     });
     if (created) {
       await audit(c, {
-        actorId: input.adminId, action: "credit.reverse", targetType: "ledger", targetId: String(orig.id), reason,
+        actorId: input.adminId,
+        action: "credit.reverse",
+        targetType: "ledger",
+        targetId: String(orig.id),
+        reason,
         metadata: { userId: orig.user_id, reversedEvent: orig.event_type, delta: -orig.available_delta },
       });
-      await notify(c, orig.user_id, { type: "credit", title: "A credit entry on your account was reversed", body: `Reason: ${reason}`, link: "/wallet" });
+      await notify(c, orig.user_id, {
+        type: "credit",
+        title: "A credit entry on your account was reversed",
+        body: `Reason: ${reason}`,
+        link: "/wallet",
+      });
     }
     return entry;
   });
@@ -246,16 +332,17 @@ export async function getWallet(userId: string, db: Db | undefined = undefined):
   const totals = await queryOne<{ earned: string; spent: string }>(
     `SELECT
        coalesce(sum(available_delta) FILTER (WHERE event_type = 'credit_earned'
-         OR (event_type = 'credit_reversed' AND reverses_id IN (SELECT id FROM credit_ledger WHERE event_type = 'credit_earned'))), 0) AS earned,
+         OR (event_type = 'credit_reversed' AND reverses_id IN (SELECT id FROM credit_ledger
+           WHERE event_type = 'credit_earned'))), 0) AS earned,
        coalesce(-sum(reserved_delta) FILTER (WHERE event_type = 'credit_spent'), 0) AS spent
-     FROM credit_ledger WHERE user_id = $1`,
+       FROM credit_ledger WHERE user_id = $1`,
     [userId],
     db,
   );
   // Pending = credits the member will earn once in-flight outgoing exchanges complete.
   const pending = await queryOne<{ n: string }>(
     `SELECT coalesce(sum(credit_cost), 0) AS n FROM exchanges
-     WHERE sender_id = $1 AND status IN ('shipped', 'delivered', 'disputed')`,
+      WHERE sender_id = $1 AND status IN ('shipped', 'delivered', 'disputed')`,
     [userId],
     db,
   );
@@ -274,11 +361,11 @@ export async function ledgerFor(userId: string, opts: { limit?: number; before?:
   const before = opts.before && /^\d+$/.test(opts.before) ? opts.before : null;
   const rows = await query<LedgerEntry & { book_title: string | null }>(
     `SELECT l.*, b.title AS book_title
-     FROM credit_ledger l
-     LEFT JOIN exchanges e ON e.id = l.exchange_id
-     LEFT JOIN listings li ON li.id = e.listing_id
-     LEFT JOIN books b ON b.id = li.book_id
-     WHERE l.user_id = $1 AND ($2::bigint IS NULL OR l.id < $2::bigint) ORDER BY l.id DESC LIMIT $3`,
+       FROM credit_ledger l
+       LEFT JOIN exchanges e ON e.id = l.exchange_id
+       LEFT JOIN listings li ON li.id = e.listing_id
+       LEFT JOIN books b ON b.id = li.book_id
+      WHERE l.user_id = $1 AND ($2::bigint IS NULL OR l.id < $2::bigint) ORDER BY l.id DESC LIMIT $3`,
     [userId, before, limit + 1],
     db,
   );
@@ -288,15 +375,21 @@ export async function ledgerFor(userId: string, opts: { limit?: number; before?:
 
 /** Lists accounts whose summary disagrees with the ledger. Should always be empty. */
 export async function reconcile(db?: Db) {
-  return query<{ user_id: string; available: number; reserved: number; ledger_available: number; ledger_reserved: number }>(
+  return query<{
+    user_id: string;
+    available: number;
+    reserved: number;
+    ledger_available: number;
+    ledger_reserved: number;
+  }>(
     `SELECT u.id AS user_id,
             coalesce(a.available, 0) AS available, coalesce(a.reserved, 0) AS reserved,
             coalesce(l.av, 0)::int AS ledger_available, coalesce(l.rs, 0)::int AS ledger_reserved
-     FROM users u
-     LEFT JOIN credit_accounts a ON a.user_id = u.id
-     LEFT JOIN (SELECT user_id, sum(available_delta) AS av, sum(reserved_delta) AS rs FROM credit_ledger GROUP BY user_id) l
+       FROM users u
+       LEFT JOIN credit_accounts a ON a.user_id = u.id
+       LEFT JOIN (SELECT user_id, sum(available_delta) AS av, sum(reserved_delta) AS rs FROM credit_ledger GROUP BY user_id) l
        ON l.user_id = u.id
-     WHERE coalesce(a.available, 0) <> coalesce(l.av, 0) OR coalesce(a.reserved, 0) <> coalesce(l.rs, 0)`,
+      WHERE coalesce(a.available, 0) <> coalesce(l.av, 0) OR coalesce(a.reserved, 0) <> coalesce(l.rs, 0)`,
     [],
     db,
   );

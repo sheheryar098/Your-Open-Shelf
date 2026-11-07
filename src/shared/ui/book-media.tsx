@@ -6,7 +6,7 @@ function hashHue(s: string) {
   return h % 360;
 }
 
-/** Generated cover tile. YOS doesn't display catalog cover art without a licence (blueprint §20.4). */
+/** Placeholder cover drawn from the title. We don't show publisher cover art until we have a licence for it. */
 export function Cover({ title, authors }: { title: string; authors?: string[] }) {
   const hue = hashHue(title);
   return (

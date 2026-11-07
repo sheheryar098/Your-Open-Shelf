@@ -9,7 +9,7 @@ function secretMatches(given: string, secret: string) {
 }
 
 /**
- * POST /api/v1/jobs — run every scheduled job once. Called by an external scheduler.
+ * POST /api/v1/jobs runs every scheduled job once. Called by an external scheduler.
  * Idempotent: each job holds an advisory lock and each item re-checks its state.
  */
 export async function POST(req: Request) {
@@ -19,7 +19,9 @@ export async function POST(req: Request) {
   if (!secretMatches(given, secret)) {
     const r = rateLimit(`jobs-auth:${clientIpFrom(req)}`, 10, 60_000);
     if (!r.ok) return tooManyRequests(r.retryAfter);
-    return problem("unauthenticated", "Missing or invalid x-jobs-secret header.", { headers: { "WWW-Authenticate": 'Header realm="jobs"' } });
+    return problem("unauthenticated", "Missing or invalid x-jobs-secret header.", {
+      headers: { "WWW-Authenticate": 'Header realm="jobs"' },
+    });
   }
   try {
     const result = await runJobs();

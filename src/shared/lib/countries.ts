@@ -10,9 +10,34 @@ export const COUNTRY_CODES = (
 ).split(" ");
 
 const CURRENCY: Record<string, string> = {
-  US: "USD", GB: "GBP", CA: "CAD", AU: "AUD", NZ: "NZD", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR",
-  ES: "EUR", IT: "EUR", PT: "EUR", BE: "EUR", AT: "EUR", FI: "EUR", IN: "INR", PK: "PKR", JP: "JPY",
-  SG: "SGD", ZA: "ZAR", NG: "NGN", KE: "KES", SE: "SEK", NO: "NOK", DK: "DKK", CH: "CHF", BR: "BRL", MX: "MXN",
+  US: "USD",
+  GB: "GBP",
+  CA: "CAD",
+  AU: "AUD",
+  NZ: "NZD",
+  IE: "EUR",
+  DE: "EUR",
+  FR: "EUR",
+  NL: "EUR",
+  ES: "EUR",
+  IT: "EUR",
+  PT: "EUR",
+  BE: "EUR",
+  AT: "EUR",
+  FI: "EUR",
+  IN: "INR",
+  PK: "PKR",
+  JP: "JPY",
+  SG: "SGD",
+  ZA: "ZAR",
+  NG: "NGN",
+  KE: "KES",
+  SE: "SEK",
+  NO: "NOK",
+  DK: "DKK",
+  CH: "CHF",
+  BR: "BRL",
+  MX: "MXN",
 };
 
 const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -35,19 +60,45 @@ export function isCountryCode(code: unknown): code is string {
   return typeof code === "string" && COUNTRY_CODES.includes(code.toUpperCase());
 }
 
-/** Localized labels for address fields (§4.4). Defaults cover most countries. */
+/** Address field labels per country. The default covers most countries. */
 export function addressLabels(code: string | null | undefined) {
   switch (code) {
-    case "US": return { region: "State", postal: "ZIP code", regionRequired: true, postalRequired: true };
-    case "CA": return { region: "Province / territory", postal: "Postal code", regionRequired: true, postalRequired: true };
-    case "AU": return { region: "State / territory", postal: "Postcode", regionRequired: true, postalRequired: true };
-    case "GB": return { region: "County (optional)", postal: "Postcode", regionRequired: false, postalRequired: true };
-    case "IE": return { region: "County", postal: "Eircode", regionRequired: false, postalRequired: false };
-    case "NZ": return { region: "Region (optional)", postal: "Postcode", regionRequired: false, postalRequired: true };
-    case "IN": return { region: "State", postal: "PIN code", regionRequired: true, postalRequired: true };
-    case "JP": return { region: "Prefecture", postal: "Postal code", regionRequired: true, postalRequired: true };
-    default: return { region: "State / province / region", postal: "Postal code", regionRequired: false, postalRequired: false };
+    case "US":
+      return { region: "State", postal: "ZIP code", regionRequired: true, postalRequired: true };
+    case "CA":
+      return { region: "Province / territory", postal: "Postal code", regionRequired: true, postalRequired: true };
+    case "AU":
+      return { region: "State / territory", postal: "Postcode", regionRequired: true, postalRequired: true };
+    case "GB":
+      return { region: "County (optional)", postal: "Postcode", regionRequired: false, postalRequired: true };
+    case "IE":
+      return { region: "County", postal: "Eircode", regionRequired: false, postalRequired: false };
+    case "NZ":
+      return { region: "Region (optional)", postal: "Postcode", regionRequired: false, postalRequired: true };
+    case "IN":
+      return { region: "State", postal: "PIN code", regionRequired: true, postalRequired: true };
+    case "JP":
+      return { region: "Prefecture", postal: "Postal code", regionRequired: true, postalRequired: true };
+    default:
+      return {
+        region: "State / province / region",
+        postal: "Postal code",
+        regionRequired: false,
+        postalRequired: false,
+      };
   }
+}
+
+/** "£2.70 to £4.50", or null when the route has no estimate. */
+export function formatPostageRange(route: {
+  postage_estimate_min: string | null;
+  postage_estimate_max: string | null;
+  postage_currency: string | null;
+}): string | null {
+  if (!route.postage_estimate_min || !route.postage_currency) return null;
+  const min = formatMoney(route.postage_estimate_min, route.postage_currency);
+  const max = formatMoney(route.postage_estimate_max ?? route.postage_estimate_min, route.postage_currency);
+  return min === max ? min : `${min} to ${max}`;
 }
 
 export function formatMoney(amount: number | string | null, currency: string | null, locale = "en"): string {

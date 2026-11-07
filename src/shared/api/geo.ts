@@ -5,12 +5,18 @@ import { isCountryCode } from "@/shared/lib/countries";
 export const COUNTRY_COOKIE = "yos_country";
 
 /**
- * IP-based country *suggestion* (§4.1). Reads common CDN/edge geolocation headers and falls
+ * Best-guess country for a first-time visitor. Reads common CDN/edge geolocation headers and falls
  * back to the browser's Accept-Language region. Never treated as proof of residence.
  */
 export async function suggestedCountry(): Promise<string | null> {
   const h = await headers();
-  for (const name of ["x-vercel-ip-country", "cf-ipcountry", "cloudfront-viewer-country", "x-country-code", "x-appengine-country"]) {
+  for (const name of [
+    "x-vercel-ip-country",
+    "cf-ipcountry",
+    "cloudfront-viewer-country",
+    "x-country-code",
+    "x-appengine-country",
+  ]) {
     const v = h.get(name)?.toUpperCase();
     if (v && isCountryCode(v)) return v;
   }

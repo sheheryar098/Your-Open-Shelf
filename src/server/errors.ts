@@ -1,6 +1,9 @@
 /** An expected, user-facing failure (validation, business rule). Safe to show its message. */
 export class DomainError extends Error {
-  constructor(message: string, public code = "domain_error") {
+  constructor(
+    message: string,
+    public code = "domain_error",
+  ) {
     super(message);
     this.name = "DomainError";
   }

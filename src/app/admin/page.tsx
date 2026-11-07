@@ -9,20 +9,32 @@ import { runJobsAction } from "@/features/admin/api/actions";
 
 export default async function AdminOverview() {
   const u = await requirePermission("staff.access");
-  const [o, mismatches, health] = await Promise.all([
-    overview(),
-    reconcile(),
-    jobHealth(),
-  ]);
+  const [o, mismatches, health] = await Promise.all([overview(), reconcile(), jobHealth()]);
   const tile = (v: number | string, k: string, href?: string, accent = false) =>
-    href ? <Link href={href} className={`stat ${accent ? "stat-accent" : ""}`}><div className="v">{v}</div><div className="k">{k}</div></Link>
-      : <div className={`stat ${accent ? "stat-accent" : ""}`}><div className="v">{v}</div><div className="k">{k}</div></div>;
+    href ? (
+      <Link href={href} className={`stat ${accent ? "stat-accent" : ""}`}>
+        <div className="v">{v}</div>
+        <div className="k">{k}</div>
+      </Link>
+    ) : (
+      <div className={`stat ${accent ? "stat-accent" : ""}`}>
+        <div className="v">{v}</div>
+        <div className="k">{k}</div>
+      </div>
+    );
   return (
     <>
       <h1>Overview</h1>
-      {!health.ok && <div className="alert alert-error">Background jobs need attention: {health.alerts[0]} <Link href="/admin/jobs">Details</Link></div>}
+      {!health.ok && (
+        <div className="alert alert-error">
+          Background jobs need attention: {health.alerts[0]} <Link href="/admin/jobs">Details</Link>
+        </div>
+      )}
       {mismatches.length > 0 && (
-        <div className="alert alert-error">Credit ledger reconciliation found {mismatches.length} mismatched account(s). <Link href="/admin/credits">Investigate</Link></div>
+        <div className="alert alert-error">
+          Credit ledger reconciliation found {mismatches.length} mismatched account(s).{" "}
+          <Link href="/admin/credits">Investigate</Link>
+        </div>
       )}
       <section>
         <h2>Work queues</h2>
@@ -55,9 +67,20 @@ export default async function AdminOverview() {
         </div>
       </section>
       <section className={`card card-flat`} style={health.ok ? undefined : { borderColor: "var(--danger)" }}>
-        <div className="card-header"><h3>Scheduled jobs</h3><Link href="/admin/jobs" className="small">Jobs &amp; queues →</Link></div>
-        {health.ok ? <p className="small muted mb-0">All jobs healthy. {health.emailQueued} email(s) queued.</p> : (
-          <ul className="small mb-0">{health.alerts.map((a) => <li key={a}>{a}</li>)}</ul>
+        <div className="card-header">
+          <h3>Scheduled jobs</h3>
+          <Link href="/admin/jobs" className="small">
+            Jobs &amp; queues →
+          </Link>
+        </div>
+        {health.ok ? (
+          <p className="small muted mb-0">All jobs healthy. {health.emailQueued} email(s) queued.</p>
+        ) : (
+          <ul className="small mb-0">
+            {health.alerts.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
         )}
         {can(u.role, "exchanges.intervene") && (
           <ActionForm action={runJobsAction} className="row">

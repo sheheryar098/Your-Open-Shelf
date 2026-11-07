@@ -9,8 +9,16 @@ export type FileKind = "listing_photo" | "avatar" | "proof_of_postage" | "eviden
 
 const SIGNATURES: { mime: string; ext: string; test: (b: Buffer) => boolean }[] = [
   { mime: "image/jpeg", ext: "jpg", test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  { mime: "image/png", ext: "png", test: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
-  { mime: "image/webp", ext: "webp", test: (b) => b.subarray(0, 4).toString() === "RIFF" && b.subarray(8, 12).toString() === "WEBP" },
+  {
+    mime: "image/png",
+    ext: "png",
+    test: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  },
+  {
+    mime: "image/webp",
+    ext: "webp",
+    test: (b) => b.subarray(0, 4).toString() === "RIFF" && b.subarray(8, 12).toString() === "WEBP",
+  },
   { mime: "application/pdf", ext: "pdf", test: (b) => b.subarray(0, 5).toString() === "%PDF-" },
 ];
 
@@ -22,7 +30,7 @@ const ALLOWED: Record<FileKind, string[]> = {
 };
 
 /**
- * Hook for malware scanning (§18.4). Plug in a scanning service here before accepting
+ * Hook for malware scanning. Plug in a scanning service here before accepting
  * files in production; returning false rejects the upload.
  */
 async function scan(_buf: Buffer, _mime: string): Promise<boolean> {
@@ -30,7 +38,8 @@ async function scan(_buf: Buffer, _mime: string): Promise<boolean> {
 }
 
 export async function saveUpload(db: Db, file: File, kind: FileKind, ownerId: string): Promise<string> {
-  if (!file || typeof file.arrayBuffer !== "function" || file.size === 0) throw new DomainError("Choose a file to upload.");
+  if (!file || typeof file.arrayBuffer !== "function" || file.size === 0)
+    throw new DomainError("Choose a file to upload.");
   if (file.size > policy.maxUploadBytes) throw new DomainError("Files must be 5 MB or smaller.");
   const buf = Buffer.from(await file.arrayBuffer());
   return saveBuffer(db, buf, kind, ownerId);
@@ -39,9 +48,11 @@ export async function saveUpload(db: Db, file: File, kind: FileKind, ownerId: st
 export async function saveBuffer(db: Db, buf: Buffer, kind: FileKind, ownerId: string | null): Promise<string> {
   const sig = SIGNATURES.find((s) => s.test(buf));
   if (!sig || !ALLOWED[kind].includes(sig.mime)) {
-    throw new DomainError(kind === "listing_photo" || kind === "avatar"
-      ? "Photos must be JPEG, PNG or WebP images."
-      : "Files must be JPEG, PNG, WebP images or PDF documents.");
+    throw new DomainError(
+      kind === "listing_photo" || kind === "avatar"
+        ? "Photos must be JPEG, PNG or WebP images."
+        : "Files must be JPEG, PNG, WebP images or PDF documents.",
+    );
   }
   if (!(await scan(buf, sig.mime))) throw new DomainError("This file was rejected by our security checks.");
   const id = randomUUID();
@@ -88,10 +99,10 @@ export async function canViewFile(row: FileRow, viewer: { id: string; role: stri
   if (row.owner_id === viewer.id) return true;
   const party = await queryOne(
     `SELECT 1 FROM exchanges e
-     WHERE (e.requester_id = $2 OR e.sender_id = $2)
+      WHERE (e.requester_id = $2 OR e.sender_id = $2)
        AND (e.id IN (SELECT exchange_id FROM shipments WHERE proof_file_id = $1)
          OR e.id IN (SELECT d.exchange_id FROM dispute_messages m JOIN disputes d ON d.id = m.dispute_id
-                     WHERE m.file_id = $1 AND NOT m.internal))`,
+      WHERE m.file_id = $1 AND NOT m.internal))`,
     [row.id, viewer.id],
   );
   return !!party;

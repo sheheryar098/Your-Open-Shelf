@@ -11,10 +11,14 @@ export async function migrate(connectionString: string, opts: { reset?: boolean;
       if (process.env.NODE_ENV === "production") throw new Error("Refusing to reset a production database");
       await client.query("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
     }
-    await client.query("CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())");
+    await client.query(
+      "CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
+    );
     const dir = path.resolve(__dirname, "..", "db", "migrations");
     const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
-    const applied = new Set((await client.query<{ name: string }>("SELECT name FROM schema_migrations")).rows.map((r) => r.name));
+    const applied = new Set(
+      (await client.query<{ name: string }>("SELECT name FROM schema_migrations")).rows.map((r) => r.name),
+    );
     for (const f of files) {
       if (applied.has(f)) continue;
       const sql = await readFile(path.join(dir, f), "utf8");

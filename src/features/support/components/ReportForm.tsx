@@ -2,7 +2,15 @@ import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
 import { reportAction } from "@/features/support/api/actions";
 import { REPORT_REASONS } from "@/shared/lib/vocab";
 
-export function ReportForm({ targetType, targetId, label = "Report" }: { targetType: "listing" | "member" | "review" | "message"; targetId: string; label?: string }) {
+export function ReportForm({
+  targetType,
+  targetId,
+  label = "Report",
+}: {
+  targetType: "listing" | "member" | "review" | "message";
+  targetId: string;
+  label?: string;
+}) {
   return (
     <details className="small">
       <summary className="muted">{label}</summary>
@@ -10,8 +18,14 @@ export function ReportForm({ targetType, targetId, label = "Report" }: { targetT
         <div className="field">
           <label htmlFor={`reason-${targetId}`}>Reason</label>
           <select id={`reason-${targetId}`} name="reason" required defaultValue="">
-            <option value="" disabled>Choose a reason…</option>
-            {Object.entries(REPORT_REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            <option value="" disabled>
+              Choose a reason…
+            </option>
+            {Object.entries(REPORT_REASONS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
           </select>
         </div>
         <div className="field">

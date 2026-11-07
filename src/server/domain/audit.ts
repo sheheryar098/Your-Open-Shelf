@@ -1,4 +1,4 @@
-import { query, type Db } from "@/server/db";
+import { pool, query, type Db } from "@/server/db";
 import { DomainError } from "@/server/errors";
 
 export interface AuditInput {
@@ -18,6 +18,11 @@ export async function audit(db: Db, a: AuditInput) {
     [a.actorId, a.action, a.targetType, a.targetId ?? null, a.reason ?? null, JSON.stringify(a.metadata ?? {})],
     db,
   );
+}
+
+/** Records a staff action outside a larger transaction. */
+export function auditStaffAction(a: AuditInput) {
+  return audit(pool(), a);
 }
 
 export function requireReason(reason: unknown, min = 5): string {

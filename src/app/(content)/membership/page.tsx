@@ -8,11 +8,17 @@ export default function Membership() {
     <div className="container page">
       <div className="narrow">
         <h1>Membership</h1>
-        <p className="lede">The core exchange is free. A future optional plan will add convenience — never a way around the credit rules.</p>
+        <p className="lede">
+          The core exchange is free. A future optional plan will add conveniences. It will never be a way around the
+          credit rules.
+        </p>
       </div>
       <div className="grid-2" style={{ marginTop: 24 }}>
         <div className="card">
-          <div className="row-between"><h2 className="mb-0">Free</h2><span className="badge badge-ok">Available now</span></div>
+          <div className="row-between">
+            <h2 className="mb-0">Free</h2>
+            <span className="badge badge-ok">Available now</span>
+          </div>
           <ul>
             <li>Browse and search every listing</li>
             <li>List up to {policy.activeListingLimit.free} active books</li>
@@ -21,10 +27,15 @@ export default function Membership() {
             <li>Wish list with availability alerts</li>
             <li>Disputes, reporting and standard support</li>
           </ul>
-          <Link href="/signup" className="btn btn-primary">Join for free</Link>
+          <Link href="/signup" className="btn btn-primary">
+            Join for free
+          </Link>
         </div>
         <div className="card">
-          <div className="row-between"><h2 className="mb-0">YOS Plus</h2><span className="badge">Coming later</span></div>
+          <div className="row-between">
+            <h2 className="mb-0">YOS Plus</h2>
+            <span className="badge">Coming later</span>
+          </div>
           <p className="muted">Planned convenience features, to be tested with members before launch:</p>
           <ul>
             <li>Higher active-listing allowance</li>
@@ -33,8 +44,8 @@ export default function Membership() {
             <li>Profile customization and early access</li>
           </ul>
           <p className="small muted">
-            YOS Plus won&apos;t include extra credits, and safety, disputes, account access and your credit records will always be
-            available on the free plan.
+            YOS Plus won&apos;t include extra credits, and safety, disputes, account access and your credit records will
+            always be available on the free plan.
           </p>
         </div>
       </div>

@@ -6,8 +6,15 @@ import { DomainError } from "@/server/errors";
 import { enforceRateLimit } from "@/server/rate-limit";
 import { actionUser } from "@/shared/api/session";
 import {
-  addListingPhotos, addToWishlist, copySchema, createListing, publishListing, removeFromWishlist,
-  removeListingPhoto, setOwnListingStatus, updateListing,
+  addListingPhotos,
+  addToWishlist,
+  copySchema,
+  createListing,
+  publishListing,
+  removeFromWishlist,
+  removeListingPhoto,
+  setOwnListingStatus,
+  updateListing,
 } from "@/server/domain/listings";
 
 function parseCopy(fd: FormData) {
@@ -29,7 +36,12 @@ function parseCopy(fd: FormData) {
 export async function createListingAction(_: ActionState, fd: FormData) {
   return run(async () => {
     const u = await actionUser();
-    enforceRateLimit(`list:${u.id}`, 30, 60 * 60_000, "You've created a lot of listings in a short time. Please try again later.");
+    enforceRateLimit(
+      `list:${u.id}`,
+      30,
+      60 * 60_000,
+      "You've created a lot of listings in a short time. Please try again later.",
+    );
     const copy = parseCopy(fd);
     const bookId = str(fd, "bookId") || null;
     const id = await createListing(
@@ -83,17 +95,29 @@ export async function removePhotoAction(listingId: string, photoId: string, _: A
 export async function publishListingAction(id: string, _: ActionState, fd: FormData) {
   return run(async () => {
     const u = await actionUser();
-    await publishListing(u.id, id, { confirmPossession: bool(fd, "confirmPossession"), confirmAnotherCopy: bool(fd, "confirmAnotherCopy") });
+    await publishListing(u.id, id, {
+      confirmPossession: bool(fd, "confirmPossession"),
+      confirmAnotherCopy: bool(fd, "confirmAnotherCopy"),
+    });
     return "Your book is now live on the shelf.";
   });
 }
 
-export async function listingStatusAction(id: string, action: "pause" | "resume" | "remove" | "reconfirm", _: ActionState) {
+export async function listingStatusAction(
+  id: string,
+  action: "pause" | "resume" | "remove" | "reconfirm",
+  _: ActionState,
+) {
   return run(async () => {
     const u = await actionUser();
     await setOwnListingStatus(u.id, id, action);
     if (action === "remove") redirect("/my/books?removed=1");
-    return { pause: "Listing paused.", resume: "Listing is active again.", reconfirm: "Thanks — availability confirmed.", remove: "" }[action];
+    return {
+      pause: "Listing paused.",
+      resume: "Listing is active again.",
+      reconfirm: "Thanks, availability confirmed.",
+      remove: "",
+    }[action];
   });
 }
 
