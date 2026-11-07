@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
-import { requirePermission } from "@/lib/auth/session";
-import { getUser } from "@/domain/users";
-import { getWallet, ledgerFor } from "@/domain/credits";
-import { senderPerformance } from "@/domain/exchanges";
-import { query } from "@/lib/db";
-import { can } from "@/lib/rbac";
-import { countryName } from "@/lib/countries";
-import { fmtDate, fmtDateTime } from "@/lib/format";
-import { LEDGER_LABEL } from "@/lib/vocab";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, ExchangeBadge } from "@/components/ui";
-import { accountStatusAction, adjustCreditsAction, restrictMemberAction, reverseLedgerAction, roleAction } from "@/app/actions/admin";
+import { requirePermission } from "@/shared/api/session";
+import { getUser } from "@/server/domain/users";
+import { getWallet, ledgerFor } from "@/server/domain/credits";
+import { senderPerformance } from "@/server/domain/exchanges";
+import { query } from "@/server/db";
+import { can } from "@/server/rbac";
+import { countryName } from "@/shared/lib/countries";
+import { fmtDate, fmtDateTime } from "@/shared/lib/format";
+import { LEDGER_LABEL } from "@/shared/lib/vocab";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Badge } from "@/shared/ui/primitives";
+import { ExchangeBadge } from "@/features/exchanges/components/ExchangeBadge";
+import { accountStatusAction, adjustCreditsAction, restrictMemberAction, reverseLedgerAction, roleAction } from "@/features/admin/api/actions";
 
 export const metadata = { title: "Member" };
 
@@ -24,7 +25,7 @@ export default async function AdminMember({ params }: { params: Promise<{ id: st
   if (!m) notFound();
   const [wallet, ledger, perf, exchanges, listings, reports, audits] = await Promise.all([
     getWallet(id),
-    ledgerFor(id, 50),
+    ledgerFor(id, { limit: 50 }).then((r) => r.rows),
     senderPerformance(id),
     query<{ id: string; status: string; title: string; role: string; updated_at: Date }>(
       `SELECT e.id, e.status, b.title, CASE WHEN e.sender_id = $1 THEN 'sender' ELSE 'requester' END AS role, e.updated_at

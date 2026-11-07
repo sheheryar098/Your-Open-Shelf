@@ -1,9 +1,9 @@
-import { listCountries, enabledRoutes } from "@/domain/routes";
-import { query } from "@/lib/db";
-import { countryName, formatMoney } from "@/lib/countries";
-import { chosenCountry } from "@/lib/geo";
-import { currentUser } from "@/lib/auth/session";
-import { Badge } from "@/components/ui";
+import { listCountries, enabledRoutes } from "@/server/domain/routes";
+import { query } from "@/server/db";
+import { countryName, formatMoney } from "@/shared/lib/countries";
+import { chosenCountry } from "@/shared/api/geo";
+import { currentUser } from "@/shared/api/session";
+import { Badge } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Countries & shipping" };
 

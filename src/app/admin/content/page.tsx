@@ -1,9 +1,9 @@
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { fmtDateTime } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge } from "@/components/ui";
-import { announcementAction, toggleAnnouncementAction } from "@/app/actions/admin";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { fmtDateTime } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Badge } from "@/shared/ui/primitives";
+import { announcementAction, toggleAnnouncementAction } from "@/features/admin/api/actions";
 
 export const metadata = { title: "Announcements" };
 

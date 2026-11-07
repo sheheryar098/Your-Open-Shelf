@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { runJobsIfDue } from "@/domain/jobs";
-import { exchangesFor } from "@/domain/exchanges";
-import { getWallet } from "@/domain/credits";
-import { query } from "@/lib/db";
-import { getCountry } from "@/domain/routes";
-import { countryName } from "@/lib/countries";
-import { relative } from "@/lib/format";
-import { ExchangeList } from "@/components/ExchangeList";
+import { requireUser } from "@/shared/api/session";
+import { runJobsIfDue } from "@/server/jobs/runner";
+import { exchangesFor } from "@/server/domain/exchanges";
+import { getWallet } from "@/server/domain/credits";
+import { query } from "@/server/db";
+import { getCountry } from "@/server/domain/routes";
+import { countryName } from "@/shared/lib/countries";
+import { relative } from "@/shared/lib/format";
+import { ExchangeList } from "@/features/exchanges/components/ExchangeList";
 
 export const metadata = { title: "Dashboard" };
 

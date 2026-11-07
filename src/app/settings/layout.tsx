@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser } from "@/shared/api/session";
 
 const LINKS = [
   ["/settings/profile", "Profile"],

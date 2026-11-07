@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { searchCatalog } from "@/domain/catalog";
-import { authorsText, fmtDate } from "@/lib/format";
-import { FORMATS, LANGUAGES, label } from "@/lib/vocab";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Empty } from "@/components/ui";
-import { addToWishlistAction, removeFromWishlistAction } from "@/app/actions/listings";
+import { requireUser } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { searchCatalog } from "@/server/domain/catalog";
+import { authorsText, fmtDate } from "@/shared/lib/format";
+import { FORMATS, LANGUAGES, label } from "@/shared/lib/vocab";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Empty } from "@/shared/ui/primitives";
+import { addToWishlistAction, removeFromWishlistAction } from "@/features/listings/api/actions";
 
 export const metadata = { title: "Wish list" };
 

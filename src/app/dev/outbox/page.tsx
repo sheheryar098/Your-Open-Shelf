@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { query } from "@/lib/db";
-import { devOutboxEnabled } from "@/lib/config";
-import { fmtDateTime } from "@/lib/format";
+import { query } from "@/server/db";
+import { devOutboxEnabled } from "@/server/config";
+import { fmtDateTime } from "@/shared/lib/format";
 
 export const metadata = { title: "Development outbox", robots: { index: false } };
 

@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { listingsForOwner } from "@/domain/listings";
-import { CONDITIONS, FORMATS, label } from "@/lib/vocab";
-import { fmtDate } from "@/lib/format";
-import { BookMedia, Empty, ListingBadge, Tabs } from "@/components/ui";
+import { requireUser } from "@/shared/api/session";
+import { listingsForOwner } from "@/server/domain/listings";
+import { CONDITIONS, FORMATS, label } from "@/shared/lib/vocab";
+import { fmtDate } from "@/shared/lib/format";
+import { BookMedia } from "@/shared/ui/book-media";
+import { Empty, Tabs } from "@/shared/ui/primitives";
+import { ListingBadge } from "@/features/listings/components/ListingBadge";
 
 export const metadata = { title: "My books" };
 

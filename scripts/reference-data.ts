@@ -1,5 +1,5 @@
 import type { Client, PoolClient } from "pg";
-import { COUNTRY_CODES, countryName, defaultCurrency } from "../src/lib/countries";
+import { COUNTRY_CODES, countryName, defaultCurrency } from "../src/shared/lib/countries";
 
 type Q = Pick<Client | PoolClient, "query">;
 

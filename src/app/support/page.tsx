@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { ticketsFor } from "@/domain/support";
-import { TICKET_CATEGORIES } from "@/lib/vocab";
-import { fmtDate, shortId } from "@/lib/format";
-import { Badge, Empty } from "@/components/ui";
+import { requireUser } from "@/shared/api/session";
+import { ticketsFor } from "@/server/domain/support";
+import { TICKET_CATEGORIES } from "@/shared/lib/vocab";
+import { fmtDate, shortId } from "@/shared/lib/format";
+import { Badge, Empty } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Support" };
 

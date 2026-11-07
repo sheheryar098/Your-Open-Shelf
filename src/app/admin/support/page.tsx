@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { TICKET_CATEGORIES } from "@/lib/vocab";
-import { relative, shortId } from "@/lib/format";
-import { Badge, Empty } from "@/components/ui";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { TICKET_CATEGORIES } from "@/shared/lib/vocab";
+import { relative, shortId } from "@/shared/lib/format";
+import { Badge, Empty } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Support queue" };
 

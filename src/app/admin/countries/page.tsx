@@ -1,11 +1,11 @@
-import { requirePermission } from "@/lib/auth/session";
-import { getRoute, listCountries } from "@/domain/routes";
-import { query } from "@/lib/db";
-import { countryName, formatMoney } from "@/lib/countries";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, CountrySelect } from "@/components/ui";
-import { countryAction, routeAction } from "@/app/actions/admin";
-import type { ShippingRoute } from "@/domain/routes";
+import { requirePermission } from "@/shared/api/session";
+import { getRoute, listCountries } from "@/server/domain/routes";
+import { query } from "@/server/db";
+import { countryName, formatMoney } from "@/shared/lib/countries";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Badge, CountrySelect } from "@/shared/ui/primitives";
+import { countryAction, routeAction } from "@/features/admin/api/actions";
+import type { ShippingRoute } from "@/server/domain/routes";
 import Link from "next/link";
 
 export const metadata = { title: "Countries & routes" };

@@ -1,0 +1,4 @@
+{
+  "$comment": "Brotli kB of client JS per route. The React/Next runtime is ~120 kB; raise a budget only after analyzing the bundle.",
+  "defaultKb": 140
+}

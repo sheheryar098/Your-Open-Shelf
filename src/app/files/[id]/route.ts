@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { canViewFile, getFile, readStored } from "@/domain/files";
-import { currentUser } from "@/lib/auth/session";
+import { problem } from "@/shared/api/http";
+import { canViewFile, getFile, readStored } from "@/server/domain/files";
+import { currentUser } from "@/shared/api/session";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse("Not found", { status: 404 });
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return problem("not-found");
   const row = await getFile(id);
-  if (!row) return new NextResponse("Not found", { status: 404 });
+  if (!row) return problem("not-found");
   const viewer = await currentUser();
-  if (!(await canViewFile(row, viewer))) return new NextResponse("Not found", { status: 404 });
+  if (!(await canViewFile(row, viewer))) return problem("not-found");
   try {
     const buf = await readStored(row);
     const isPublic = row.kind === "listing_photo" || row.kind === "avatar";
@@ -23,6 +24,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       },
     });
   } catch {
-    return new NextResponse("Not found", { status: 404 });
+    return problem("not-found");
   }
 }

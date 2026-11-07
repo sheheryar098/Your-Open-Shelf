@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { currentUser } from "@/lib/auth/session";
-import { verifyEmail } from "@/domain/users";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { resendVerificationAction } from "@/app/actions/auth";
-import { devOutboxEnabled } from "@/lib/config";
+import { currentUser } from "@/shared/api/session";
+import { verifyEmail } from "@/server/domain/users";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { resendVerificationAction } from "@/features/accounts/api/auth-actions";
+import { devOutboxEnabled } from "@/server/config";
 
 export const metadata = { title: "Verify your email" };
 

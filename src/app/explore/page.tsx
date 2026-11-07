@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { searchListings, type SearchFilters } from "@/domain/listings";
-import { query } from "@/lib/db";
-import { currentUser } from "@/lib/auth/session";
-import { chosenCountry } from "@/lib/geo";
-import { countryName } from "@/lib/countries";
-import { CONDITIONS, FORMATS, LANGUAGES } from "@/lib/vocab";
-import { BookCard, Empty, Pager } from "@/components/ui";
+import { searchListings, type SearchFilters } from "@/server/domain/listings";
+import { query } from "@/server/db";
+import { currentUser } from "@/shared/api/session";
+import { chosenCountry } from "@/shared/api/geo";
+import { countryName } from "@/shared/lib/countries";
+import { CONDITIONS, FORMATS, LANGUAGES } from "@/shared/lib/vocab";
+import { BookCard } from "@/features/listings/components/BookCard";
+import { CursorPager, Empty } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Explore books" };
 
@@ -27,7 +28,7 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
     shipsTo,
     availability: sp.availability === "domestic" || sp.availability === "international" ? sp.availability : undefined,
     sort: sp.sort === "title" ? "title" : sp.sort === "relevance" ? "relevance" : "newest",
-    page: Number(sp.page) || 1,
+    cursor: sp.cursor ?? null,
   };
   const [results, categories, senderCountries] = await Promise.all([
     searchListings(filters),
@@ -47,9 +48,9 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
         {myCountry && (
           <div className="small">
             {shipsTo ? (
-              <>Showing books that can ship to <strong>{countryName(myCountry)}</strong> · <Link href={qs({ ships: "anywhere", page: undefined })}>Show all</Link></>
+              <>Showing books that can ship to <strong>{countryName(myCountry)}</strong> · <Link href={qs({ ships: "anywhere", cursor: undefined })}>Show all</Link></>
             ) : (
-              <>Showing books from everywhere · <Link href={qs({ ships: undefined, page: undefined })}>Only books that ship to {countryName(myCountry)}</Link></>
+              <>Showing books from everywhere · <Link href={qs({ ships: undefined, cursor: undefined })}>Only books that ship to {countryName(myCountry)}</Link></>
             )}
           </div>
         )}
@@ -139,7 +140,7 @@ export default async function Explore({ searchParams }: { searchParams: Promise<
           {results.rows.map((l) => <BookCard key={l.id} l={l} />)}
         </div>
       )}
-      <Pager page={results.page} total={results.total} pageSize={results.pageSize} href={(p) => qs({ page: String(p) })} />
+      <CursorPager nextHref={results.nextCursor ? qs({ cursor: results.nextCursor }) : null} firstHref={sp.cursor ? qs({ cursor: undefined }) : null} />
     </div>
   );
 }

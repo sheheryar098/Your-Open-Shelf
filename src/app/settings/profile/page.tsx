@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { LANGUAGES } from "@/lib/vocab";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { CountrySelect, Photo } from "@/components/ui";
-import { profileAction } from "@/app/actions/account";
+import { requireUser } from "@/shared/api/session";
+import { LANGUAGES } from "@/shared/lib/vocab";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { CountrySelect } from "@/shared/ui/primitives";
+import { Photo } from "@/shared/ui/book-media";
+import { profileAction } from "@/features/accounts/api/actions";
 
 export const metadata = { title: "Profile settings" };
 

@@ -1,20 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
-import { getExchangeForViewer } from "@/domain/exchanges";
-import { runJobsIfDue } from "@/domain/jobs";
-import { countryName, formatMoney } from "@/lib/countries";
-import { CONDITIONS, DISPUTE_TYPES, EXCHANGE_STATUS_LABEL, FORMATS, REVIEW_TAGS, label } from "@/lib/vocab";
-import { authorsText, fmtDate, fmtDateTime, relative, shortId } from "@/lib/format";
-import { policy } from "@/lib/config";
-import { now } from "@/lib/clock";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { BookMedia, ExchangeBadge, Stars } from "@/components/ui";
-import { ReportForm } from "@/components/ReportForm";
+import { requireUser } from "@/shared/api/session";
+import { getExchangeForViewer } from "@/server/domain/exchanges";
+import { runJobsIfDue } from "@/server/jobs/runner";
+import { countryName, formatMoney } from "@/shared/lib/countries";
+import { CONDITIONS, DISPUTE_TYPES, EXCHANGE_STATUS_LABEL, FORMATS, REVIEW_TAGS, label } from "@/shared/lib/vocab";
+import { authorsText, fmtDate, fmtDateTime, relative, shortId } from "@/shared/lib/format";
+import { policy } from "@/server/config";
+import { now } from "@/server/clock";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { BookMedia } from "@/shared/ui/book-media";
+import { ExchangeBadge } from "@/features/exchanges/components/ExchangeBadge";
+import { Stars } from "@/shared/ui/primitives";
+import { ReportForm } from "@/features/support/components/ReportForm";
 import {
   acceptAction, cancelRequestAction, confirmReceiptAction, declineAction, messageAction, openDisputeAction,
   reviewAction, senderCancelAction, shipAction,
-} from "@/app/actions/exchanges";
+} from "@/features/exchanges/api/actions";
 
 export const metadata = { title: "Exchange" };
 

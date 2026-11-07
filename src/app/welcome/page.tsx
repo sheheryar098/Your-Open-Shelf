@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { queryOne } from "@/lib/db";
-import { countryName } from "@/lib/countries";
-import { getCountry } from "@/domain/routes";
-import { devOutboxEnabled } from "@/lib/config";
+import { requireUser } from "@/shared/api/session";
+import { queryOne } from "@/server/db";
+import { countryName } from "@/shared/lib/countries";
+import { getCountry } from "@/server/domain/routes";
+import { devOutboxEnabled } from "@/server/config";
 
 export const metadata = { title: "Welcome" };
 

@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission } from "@/lib/auth/session";
-import { getExchangeForViewer } from "@/domain/exchanges";
-import { query } from "@/lib/db";
-import { can } from "@/lib/rbac";
-import { countryName } from "@/lib/countries";
-import { DISPUTE_TYPES, EXCHANGE_STATUS_LABEL, LEDGER_LABEL } from "@/lib/vocab";
-import { fmtDateTime, shortId } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { ExchangeBadge } from "@/components/ui";
-import { exchangeInterventionAction } from "@/app/actions/admin";
+import { requirePermission } from "@/shared/api/session";
+import { getExchangeForViewer } from "@/server/domain/exchanges";
+import { query } from "@/server/db";
+import { can } from "@/server/rbac";
+import { countryName } from "@/shared/lib/countries";
+import { DISPUTE_TYPES, EXCHANGE_STATUS_LABEL, LEDGER_LABEL } from "@/shared/lib/vocab";
+import { fmtDateTime, shortId } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { ExchangeBadge } from "@/features/exchanges/components/ExchangeBadge";
+import { exchangeInterventionAction } from "@/features/admin/api/actions";
 
 export const metadata = { title: "Exchange (staff)" };
 

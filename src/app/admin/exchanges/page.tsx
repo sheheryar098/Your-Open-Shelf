@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { allExchanges } from "@/domain/exchanges";
-import { countryName } from "@/lib/countries";
-import { EXCHANGE_STATUS_LABEL } from "@/lib/vocab";
-import { fmtDate, shortId } from "@/lib/format";
-import { ExchangeBadge } from "@/components/ui";
+import { requirePermission } from "@/shared/api/session";
+import { allExchanges } from "@/server/domain/exchanges";
+import { countryName } from "@/shared/lib/countries";
+import { EXCHANGE_STATUS_LABEL } from "@/shared/lib/vocab";
+import { fmtDate, shortId } from "@/shared/lib/format";
+import { ExchangeBadge } from "@/features/exchanges/components/ExchangeBadge";
 
 export const metadata = { title: "Requests & exchanges" };
 

@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { closePool, pool } from "@/lib/db";
-import { addDays, now, setNow } from "@/lib/clock";
+import { closePool, pool } from "@/server/db";
+import { addDays, now, setNow } from "@/server/clock";
 import {
   acceptRequest, cancelRequest, confirmReceipt, declineRequest, getExchangeForViewer, markShipped,
-  openDispute, processDueExchanges, requestBook, resolveDispute, senderCancel, leaveReview, withdrawDispute,
-} from "@/domain/exchanges";
-import { reconcile, getWallet } from "@/domain/credits";
-import { balance, exchangeStatus, key, listingStatus, makeListing, makeUser, resetData, adminUser } from "./helpers";
+  openDispute, requestBook, resolveDispute, senderCancel, leaveReview, withdrawDispute,
+} from "@/server/domain/exchanges";
+import { reconcile, getWallet } from "@/server/domain/credits";
+import { balance, exchangeStatus, key, listingStatus, makeListing, makeUser, resetData, adminUser, processDue } from "./helpers";
 
 const today = () => now().toISOString().slice(0, 10);
 const ship = (senderId: string, id: string, tracking = `TRK${Math.random().toString(36).slice(2, 12).toUpperCase()}`) =>
@@ -151,7 +151,7 @@ describe("ending a request before shipment releases the credit", () => {
     const listing = await makeListing(sender.id);
     const ex = await requestBook({ requesterId: req.id, listingId: listing, addressId: req.addressId, requestKey: key() });
     setNow(addDays(new Date(), 4));
-    const r = await processDueExchanges();
+    const r = await processDue();
     expect(r.expired).toBe(1);
     expect(await exchangeStatus(ex)).toBe("expired");
     expect(await balance(req.id)).toEqual({ available: 1, reserved: 0 });
@@ -166,7 +166,7 @@ describe("ending a request before shipment releases the credit", () => {
     const ex = await requestBook({ requesterId: req.id, listingId: l1, addressId: req.addressId, requestKey: key() });
     await acceptRequest(sender.id, ex);
     setNow(addDays(new Date(), 10));
-    expect((await processDueExchanges()).dispatchMissed).toBe(1);
+    expect((await processDue()).dispatchMissed).toBe(1);
     expect(await exchangeStatus(ex)).toBe("cancelled");
     expect(await listingStatus(l1)).toBe("paused");
     setNow(null);
@@ -213,11 +213,11 @@ describe("dispatch, delivery and completion", () => {
     await acceptRequest(sender.id, ex);
     await ship(sender.id, ex);
     setNow(addDays(new Date(), 13)); // GB domestic max 5 days + 7 grace
-    expect((await processDueExchanges()).autoDelivered).toBe(1);
+    expect((await processDue()).autoDelivered).toBe(1);
     expect(await exchangeStatus(ex)).toBe("delivered");
     expect(await balance(sender.id)).toEqual({ available: 0, reserved: 0 });
     setNow(addDays(new Date(), 17));
-    expect((await processDueExchanges()).completed).toBe(1);
+    expect((await processDue()).completed).toBe(1);
     expect(await exchangeStatus(ex)).toBe("completed");
     expect(await balance(sender.id)).toEqual({ available: 1, reserved: 0 });
   });
@@ -277,7 +277,7 @@ describe("disputes", () => {
     const disputeId = await openDispute(req.id, ex, { issueType: "condition_mismatch", description: "Several pages are missing from the middle of the book." });
     expect(await exchangeStatus(ex)).toBe("disputed");
     setNow(addDays(new Date(), 60));
-    const r = await processDueExchanges();
+    const r = await processDue();
     expect(r.autoDelivered + r.completed).toBe(0);
     expect(await exchangeStatus(ex)).toBe("disputed");
     expect(await balance(sender.id)).toEqual({ available: 0, reserved: 0 });

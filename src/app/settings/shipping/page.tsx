@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { enabledRoutes } from "@/domain/routes";
-import { countryName } from "@/lib/countries";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { shippingPrefsAction } from "@/app/actions/account";
+import { requireUser } from "@/shared/api/session";
+import { enabledRoutes } from "@/server/domain/routes";
+import { countryName } from "@/shared/lib/countries";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { shippingPrefsAction } from "@/features/accounts/api/actions";
 
 export const metadata = { title: "Shipping preferences" };
 

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { reconcile } from "@/domain/credits";
-import { query, queryOne } from "@/lib/db";
-import { LEDGER_LABEL } from "@/lib/vocab";
-import { fmtDateTime } from "@/lib/format";
+import { requirePermission } from "@/shared/api/session";
+import { reconcile } from "@/server/domain/credits";
+import { query, queryOne } from "@/server/db";
+import { LEDGER_LABEL } from "@/shared/lib/vocab";
+import { fmtDateTime } from "@/shared/lib/format";
 
 export const metadata = { title: "Credit ledger" };
 

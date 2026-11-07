@@ -1,9 +1,9 @@
-import { requireUser } from "@/lib/auth/session";
-import { addressesFor, type Address } from "@/domain/support";
-import { addressLabels, countryName } from "@/lib/countries";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { CountrySelect, Empty } from "@/components/ui";
-import { deleteAddressAction, saveAddressAction } from "@/app/actions/account";
+import { requireUser } from "@/shared/api/session";
+import { addressesFor, type Address } from "@/server/domain/support";
+import { addressLabels, countryName } from "@/shared/lib/countries";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { CountrySelect, Empty } from "@/shared/ui/primitives";
+import { deleteAddressAction, saveAddressAction } from "@/features/accounts/api/actions";
 
 export const metadata = { title: "Addresses" };
 

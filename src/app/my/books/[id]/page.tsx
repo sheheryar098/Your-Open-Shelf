@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
-import { getListingDetail } from "@/domain/listings";
-import { query } from "@/lib/db";
-import { authorsText, fmtDate } from "@/lib/format";
-import { policy } from "@/lib/config";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { CopyFields } from "@/components/CopyFields";
-import { ExchangeBadge, ListingBadge, Photo } from "@/components/ui";
+import { requireUser } from "@/shared/api/session";
+import { getListingDetail } from "@/server/domain/listings";
+import { query } from "@/server/db";
+import { authorsText, fmtDate } from "@/shared/lib/format";
+import { policy } from "@/server/config";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { CopyFields } from "@/features/listings/components/CopyFields";
+import { ExchangeBadge } from "@/features/exchanges/components/ExchangeBadge";
+import { ListingBadge } from "@/features/listings/components/ListingBadge";
+import { Photo } from "@/shared/ui/book-media";
 import {
   addPhotosAction, listingStatusAction, publishListingAction, removePhotoAction, updateListingAction,
-} from "@/app/actions/listings";
+} from "@/features/listings/api/actions";
 
 export const metadata = { title: "Manage listing" };
 

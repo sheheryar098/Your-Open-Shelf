@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { getWallet, ledgerFor } from "@/domain/credits";
-import { LEDGER_LABEL } from "@/lib/vocab";
-import { fmtDateTime } from "@/lib/format";
-import { Empty } from "@/components/ui";
+import { requireUser } from "@/shared/api/session";
+import { getWallet, ledgerFor } from "@/server/domain/credits";
+import { LEDGER_LABEL } from "@/shared/lib/vocab";
+import { fmtDateTime } from "@/shared/lib/format";
+import { CursorPager, Empty } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Credit wallet" };
 
-export default async function WalletPage() {
+export default async function WalletPage({ searchParams }: { searchParams: Promise<{ before?: string }> }) {
   const u = await requireUser("/wallet");
-  const [w, ledger] = await Promise.all([getWallet(u.id), ledgerFor(u.id, 200)]);
+  const { before } = await searchParams;
+  const [w, page] = await Promise.all([getWallet(u.id), ledgerFor(u.id, { limit: 50, before })]);
+  const ledger = page.rows;
   return (
     <div className="container page stack-lg">
       <div>
@@ -48,6 +50,7 @@ export default async function WalletPage() {
             </table>
           </div>
         )}
+        <CursorPager nextHref={page.nextCursor ? `/wallet?before=${page.nextCursor}` : null} firstHref={before ? "/wallet" : null} />
         <p className="small muted" style={{ marginTop: 12 }}>
           Every movement is recorded with a reason. If something looks wrong, <Link href="/support/new?category=credit_balance">contact support</Link>.
         </p>

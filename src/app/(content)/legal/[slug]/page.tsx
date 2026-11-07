@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { POLICIES } from "../policies";
-import { policy } from "@/lib/config";
+import { POLICIES } from "@/features/content/model/policies";
+import { policy } from "@/server/config";
 
 export function generateStaticParams() {
   return Object.keys(POLICIES).map((slug) => ({ slug }));

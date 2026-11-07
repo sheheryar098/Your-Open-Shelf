@@ -1,6 +1,6 @@
-import { requirePermission } from "@/lib/auth/session";
-import { permissionsFor, type Permission } from "@/lib/rbac";
-import { query } from "@/lib/db";
+import { requirePermission } from "@/shared/api/session";
+import { permissionsFor, type Permission } from "@/server/rbac";
+import { query } from "@/server/db";
 import Link from "next/link";
 
 export const metadata = { title: "Roles & permissions" };

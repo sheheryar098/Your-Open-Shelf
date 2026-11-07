@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { closePool, pool, tx } from "@/lib/db";
-import { adminAdjust, postLedgerEvent, reconcile, reverseEntry, getWallet } from "@/domain/credits";
+import { closePool, pool, tx } from "@/server/db";
+import { adminAdjust, postLedgerEvent, reconcile, reverseEntry, getWallet } from "@/server/domain/credits";
 import { adminUser, balance, key, makeUser, resetData } from "./helpers";
 
 beforeEach(resetData);

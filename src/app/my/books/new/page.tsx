@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { getBook, lookupIsbn, searchCatalog, type BookInput } from "@/domain/catalog";
-import { getCountry } from "@/domain/routes";
-import { looksLikeIsbn } from "@/lib/isbn";
-import { authorsText } from "@/lib/format";
-import { countryName } from "@/lib/countries";
-import { policy } from "@/lib/config";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { CopyFields } from "@/components/CopyFields";
-import { createListingAction } from "@/app/actions/listings";
+import { requireUser } from "@/shared/api/session";
+import { getBook, lookupIsbn, searchCatalog, type BookInput } from "@/server/domain/catalog";
+import { getCountry } from "@/server/domain/routes";
+import { looksLikeIsbn } from "@/shared/lib/isbn";
+import { authorsText } from "@/shared/lib/format";
+import { countryName } from "@/shared/lib/countries";
+import { policy } from "@/server/config";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { CopyFields } from "@/features/listings/components/CopyFields";
+import { createListingAction } from "@/features/listings/api/actions";
 
 export const metadata = { title: "List a book" };
 

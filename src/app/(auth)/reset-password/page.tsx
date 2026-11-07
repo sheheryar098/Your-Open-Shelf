@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { resetPasswordAction } from "@/app/actions/auth";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { resetPasswordAction } from "@/features/accounts/api/auth-actions";
 
 export const metadata = { title: "Choose a new password" };
 

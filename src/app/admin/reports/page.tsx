@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { REPORT_REASONS } from "@/lib/vocab";
-import { fmtDateTime } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge, Empty } from "@/components/ui";
-import { handleReportAction } from "@/app/actions/admin";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { REPORT_REASONS } from "@/shared/lib/vocab";
+import { fmtDateTime } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Badge, Empty } from "@/shared/ui/primitives";
+import { handleReportAction } from "@/features/admin/api/actions";
 
 export const metadata = { title: "Reports" };
 

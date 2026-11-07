@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { POLICIES } from "./policies";
+import { POLICIES } from "@/features/content/model/policies";
 
 export const metadata = { title: "Policies" };
 

@@ -21,8 +21,11 @@ npm run db:reset           # applies migrations and loads demo data (development
 
 # 3. Run
 npm run dev                # http://localhost:3000
-npm test                   # domain test suite (uses yos_test)
+npm test                   # test suite (uses yos_test)
+npm run check              # lint + import boundaries, tests, build, bundle budget (same as CI)
 ```
+
+Coding conventions live in `CLAUDE.md`. Frontend work follows the `frontend-architecture` skill. Backend work follows `api-design`, `background-jobs` and `caching`. All four are vendored in `.claude/skills/`.
 
 **Demo accounts** (password `yos-demo-password`):
 
@@ -39,34 +42,55 @@ In development, email is written to an outbox, not sent. Open `/dev/outbox` to c
 
 ## Scheduled jobs
 
-Deadlines, auto-confirmation, completion after the dispute window, reminders, stale-listing pauses, address redaction and email delivery all run in `runJobs()`. You can trigger it three ways:
+Scheduled work is split into small jobs in `src/server/jobs/runner.ts`: two email lanes, expiring requests, missed dispatch, auto-confirmation, completion after the dispute window, reminders, stale listings, address redaction and cache purge. You can trigger them three ways:
 
 - `npm run jobs`, from cron every few minutes, or
-- `POST /api/jobs` with the header `x-jobs-secret: $JOBS_SECRET`, or
-- the **Run now** button in the admin overview.
+- `POST /api/v1/jobs` with the header `x-jobs-secret: $JOBS_SECRET`, or
+- **Run all jobs now** in the admin area.
 
-Member pages also trigger it opportunistically, at most once a minute, so deadlines are still enforced if the scheduler is down.
+Member pages also trigger them opportunistically, at most once a minute per instance.
+
+These rules come from the background-jobs skill:
+
+- **Safe to repeat.** Each item is handled in its own transaction under `FOR UPDATE SKIP LOCKED` and re-checks its state first, so running an item twice does no harm. Each job also holds a Postgres advisory lock, so only one instance runs it at a time.
+- **Poison items can't block the queue.** A failing item is retried on later runs. After 5 failures it's parked in `job_failures` and skipped, and staff can retry or dismiss it under **Admin → Jobs & queues**.
+- **Email.** Email is written in the same transaction as the change it describes (outbox pattern). Security mail (verification, password reset) has its own lane. Retries use exponential backoff with jitter. Permanent failures go straight to `dead`.
+- **Observability.** Every run writes a structured log line and a `job_runs` row. `GET /api/v1/health` returns 503 when email is stale or dead, items are parked, or exchange deadlines are overdue, so alerts fire on age as well as failures.
+
+## HTTP API
+
+`docs/openapi.yaml` (OpenAPI 3.1) documents the endpoints. It follows the api-design skill: everything is versioned under `/api/v1`, success responses are wrapped in `{ data }`, errors use RFC 9457 `application/problem+json`, and 429s include `Retry-After`. The member-facing site uses Server Actions, which are not a public API. Request idempotency keys are matched against the request they were first used for: replaying the same request returns the original result, and reusing a key for a different request is refused. Catalog search and wallet history use cursor pagination.
+
+## Caching
+
+Following the caching skill, the only cache is in front of a slow, rate-limited upstream: the optional Open Library ISBN lookup (`src/server/cache.ts`). It is cache-aside in Postgres with versioned keys (`isbn:v1:…`), a 7-day TTL plus jitter, 1-hour negative caching, no caching of errors, single-flight for concurrent misses, and hit/miss/error counters shown in the admin area. Country and route lookups are indexed primary-key reads and aren't cached. Request-time eligibility checks always read the database.
 
 ## Architecture
 
 ```
 src/
-  domain/        Business logic. Pure server code with no framework imports; the tests exercise it directly
-    credits.ts     Append-only ledger + wallet summary, reserve/release/spend/earn/refund/adjust/reverse
-    exchanges.ts   Exchange state machine, deadlines, disputes, messages, reviews, scheduled processing
-    listings.ts    Listing lifecycle, publish rules, search, wish-list alerts, moderation
-    routes.ts      Country status + route matrix + eligibility checks
-    users.ts       Registration, sessions, verification, profile, privacy export/closure, staff actions
-    support.ts     Addresses, reports, support tickets, public profiles
-    catalog.ts     Shared catalog records (one per ISBN), optional Open Library metadata lookup
-    files.ts       Uploads (content-sniffed, size-limited, access-controlled), malware-scan hook
-    analytics.ts   Admin overview and KPIs (north star: successful exchanges per month)
-  app/           Pages, layouts, route handlers and server actions (thin wrappers around domain/)
-  lib/           db, auth/session, RBAC, rate limiting, clock, formatting, vocabularies
-db/migrations/   SQL schema
-scripts/         migrate, seed (reference + demo data), jobs
-tests/           Vitest suites against a real PostgreSQL database
+  app/          Routing, layouts and pages only. Composes features
+  features/     One folder per feature. Features never import each other (enforced by ESLint)
+    listings/     components/ (BookCard, CopyFields, ListingBadge), api/actions.ts
+    exchanges/    components/ (ExchangeList, ExchangeBadge), api/actions.ts
+    accounts/     api/ (auth and account actions)
+    support/      components/ReportForm, api/actions.ts
+    admin/        api/actions.ts
+    content/      model/ (FAQ, policy drafts), components/FaqList
+  shared/
+    ui/           Design-system primitives, ActionForm, Flash toast, book media
+    api/          Session/auth, server-action runner (error mapping), problem+json helpers, geo
+    lib/          Framework-free helpers (countries, vocabularies, ISBN, formatting)
+  server/       Backend. No React or Next.js imports (enforced)
+    db.ts, clock.ts, config.ts, rbac.ts, rate-limit.ts, http.ts (outbound client), cache.ts
+    domain/       credits, exchanges, listings, routes, users, support, catalog, files, analytics, audit, notifications
+    jobs/         runner (locks, dead letters, health), email (outbox delivery), types
+db/migrations/  SQL schema
+scripts/        migrate, seed, jobs, check-bundle
+tests/          Vitest suites against a real PostgreSQL database
 ```
+
+`npm run lint` enforces the import rules. `bundle-budget.json` sets a brotli budget for each route's client JavaScript, and `npm run bundle:check` fails the build when a route exceeds it. CI (`.github/workflows/ci.yml`) runs lint, tests against PostgreSQL, the build and the bundle budget.
 
 ### Credit integrity (§9, §18.5)
 
@@ -96,7 +120,7 @@ requested ──accept──▶ accepted ──ship──▶ shipped ──recip
    └─requester cancels                                                         disputed ──▶ completed | refunded
 ```
 
-The server validates every transition against the table in `exchanges.ts`. Members can't mark a parcel as carrier-delivered. Only the recipient's own confirmation, a staff action, or the auto-confirm rule for tracked parcels can move an exchange to delivered.
+The server validates every transition against the table in `src/server/domain/exchanges.ts`. Members can't mark a parcel as carrier-delivered. Only the recipient's own confirmation, a staff action, or the auto-confirm rule for tracked parcels can move an exchange to delivered.
 
 ### Countries and routes (§4)
 
@@ -108,8 +132,8 @@ Every ISO country is seeded. Exchanges are **open** in GB, IE, US and CA, and in
 - Server Actions get Next.js's origin check, and every action also re-checks authentication and authorization.
 - Addresses are private. A sender sees an address snapshot only after accepting the request. Snapshots are redacted 60 days after the exchange closes.
 - Uploads are type-checked by their content (magic bytes), not their file name, and limited to 5 MB. They're served with `nosniff` and a sandbox CSP. Proof of postage and dispute evidence are visible only to the two members in the exchange and to staff.
-- Staff have role-based permissions (`src/lib/rbac.ts`). Every sensitive staff action requires a reason and is written to the append-only `admin_audit_logs`.
-- Members can download their data (`/api/me/export`) and close their account, which anonymizes it while keeping the ledger.
+- Staff have role-based permissions (`src/server/rbac.ts`). Every sensitive staff action requires a reason and is written to the append-only `admin_audit_logs`.
+- Members can download their data (`/api/v1/me/export`) and close their account, which anonymizes it while keeping the ledger.
 - Rate limits apply to sign-in, registration, requests, listings, messages, reports and tickets.
 
 ## Blueprint acceptance checklist (Appendix A)
@@ -138,7 +162,7 @@ Every ISO country is seeded. Exchanges are **open** in GB, IE, US and CA, and in
 
 - **Premium (YOS Plus) and payments.** These are blueprint Phase 2. The data model has `users.plan` and plan-based listing limits.
 - **Carrier APIs, label purchase and live rate quotes.** Postage figures are admin-entered *indicative* estimates and are labelled that way.
-- **Email provider.** `deliverQueuedEmail()` logs to the console. Connect a transactional email provider there.
+- **Email provider.** The default `EmailTransport` in `src/server/jobs/email.ts` logs to the console. Implement that interface for a transactional email provider; every send passes an idempotency key the provider can use to deduplicate.
 - **Malware scanning.** `files.scan()` is a hook that currently accepts every file.
 - **Object storage.** Uploads go to `UPLOAD_DIR` on local disk. Use object storage in production.
 - **Shared rate limiting.** The limiter is in memory, which only works on a single instance. Move it to Redis or Postgres when running several instances.

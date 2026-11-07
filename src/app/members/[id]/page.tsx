@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
-import { publicProfile } from "@/domain/support";
-import { senderPerformance } from "@/domain/exchanges";
-import { query } from "@/lib/db";
-import { countryName } from "@/lib/countries";
-import { fmtDate, plural } from "@/lib/format";
-import { REVIEW_TAGS } from "@/lib/vocab";
-import { currentUser } from "@/lib/auth/session";
-import { BookCard, Empty, Stars, Photo } from "@/components/ui";
-import { ReportForm } from "@/components/ReportForm";
-import type { ListingCard } from "@/domain/listings";
+import { publicProfile } from "@/server/domain/support";
+import { senderPerformance } from "@/server/domain/exchanges";
+import { query } from "@/server/db";
+import { countryName } from "@/shared/lib/countries";
+import { fmtDate, plural } from "@/shared/lib/format";
+import { REVIEW_TAGS } from "@/shared/lib/vocab";
+import { currentUser } from "@/shared/api/session";
+import { BookCard } from "@/features/listings/components/BookCard";
+import { Empty, Stars } from "@/shared/ui/primitives";
+import { Photo } from "@/shared/ui/book-media";
+import { ReportForm } from "@/features/support/components/ReportForm";
+import type { ListingCard } from "@/server/domain/listings";
 
 export const metadata = { title: "Member profile" };
 

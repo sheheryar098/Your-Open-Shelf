@@ -1,4 +1,4 @@
-import { CONDITIONS, NOT_EXCHANGEABLE } from "@/lib/vocab";
+import { CONDITIONS, NOT_EXCHANGEABLE } from "@/shared/lib/vocab";
 
 export const metadata = { title: "Book condition guide" };
 

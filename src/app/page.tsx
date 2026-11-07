@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { recentListings } from "@/domain/listings";
-import { enabledRoutes, listCountries } from "@/domain/routes";
-import { query } from "@/lib/db";
-import { countryName } from "@/lib/countries";
-import { CONDITIONS } from "@/lib/vocab";
-import { BookCard } from "@/components/ui";
-import { FaqList, HOME_FAQ } from "./(content)/faq-data";
+import { recentListings } from "@/server/domain/listings";
+import { enabledRoutes, listCountries } from "@/server/domain/routes";
+import { query } from "@/server/db";
+import { countryName } from "@/shared/lib/countries";
+import { CONDITIONS } from "@/shared/lib/vocab";
+import { BookCard } from "@/features/listings/components/BookCard";
+import { HOME_FAQ } from "@/features/content/model/faq";
+import { FaqList } from "@/features/content/components/FaqList";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ closed?: string }> }) {
   const sp = await searchParams;

@@ -1,5 +1,5 @@
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { forgotPasswordAction } from "@/app/actions/auth";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { forgotPasswordAction } from "@/features/accounts/api/auth-actions";
 
 export const metadata = { title: "Reset your password" };
 

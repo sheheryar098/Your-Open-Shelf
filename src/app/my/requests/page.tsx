@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { exchangesFor } from "@/domain/exchanges";
-import { runJobsIfDue } from "@/domain/jobs";
-import { ExchangeList } from "@/components/ExchangeList";
-import { Tabs } from "@/components/ui";
+import { requireUser } from "@/shared/api/session";
+import { exchangesFor } from "@/server/domain/exchanges";
+import { runJobsIfDue } from "@/server/jobs/runner";
+import { ExchangeList } from "@/features/exchanges/components/ExchangeList";
+import { Tabs } from "@/shared/ui/primitives";
 
 export const metadata = { title: "My requests" };
 

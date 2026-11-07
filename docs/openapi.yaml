@@ -1,0 +1,174 @@
+openapi: 3.1.0
+info:
+  title: YOS — Your Open Shelf HTTP API
+  version: "1"
+  summary: Operational and member-data endpoints.
+  description: |
+    The member-facing website uses Next.js Server Actions, which are not a public API.
+    This document covers the HTTP endpoints YOS exposes for scheduling, monitoring,
+    data-access requests and file delivery.
+
+    Conventions (api-design skill):
+    - Versioned under `/api/v1`.
+    - Successful JSON responses are objects with a `data` field — never bare arrays.
+    - Every error uses RFC 9457 problem details (`application/problem+json`).
+    - `429` responses include `Retry-After`.
+    - Deprecations will be announced with `Deprecation` and `Sunset` headers.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check for uptime monitors
+      description: |
+        Returns 503 when the database is unreachable or background work is falling behind
+        (stale or dead email, parked job items, overdue exchange deadlines). Send the jobs
+        secret to also receive alert text and queue figures.
+      parameters:
+        - $ref: "#/components/parameters/JobsSecretOptional"
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+        "503":
+          description: Degraded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+  /api/v1/jobs:
+    post:
+      summary: Run all scheduled jobs once
+      description: |
+        Call every few minutes from an external scheduler. Safe to call concurrently and to
+        retry: each job holds a Postgres advisory lock and each item re-checks its state.
+      parameters:
+        - $ref: "#/components/parameters/JobsSecret"
+      responses:
+        "200":
+          description: Jobs ran
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      jobs:
+                        type: object
+                        additionalProperties: { $ref: "#/components/schemas/JobResult" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /api/v1/me/export:
+    get:
+      summary: Download all data YOS holds about the signed-in member
+      security: [{ session: [] }]
+      responses:
+        "200":
+          description: JSON attachment
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object, description: "Profile, addresses, listings, exchanges, credit ledger, reviews and tickets." }
+        "401": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /files/{id}:
+    get:
+      summary: Fetch an uploaded file
+      description: |
+        Listing photos and avatars are public. Proof of postage and dispute evidence are only
+        returned to the two members of the exchange and to staff; for anyone else the file
+        does not exist (404).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The file
+          content:
+            image/jpeg: {}
+            image/png: {}
+            image/webp: {}
+            application/pdf: {}
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: yos_session
+  parameters:
+    JobsSecret:
+      name: x-jobs-secret
+      in: header
+      required: true
+      schema: { type: string }
+    JobsSecretOptional:
+      name: x-jobs-secret
+      in: header
+      required: false
+      schema: { type: string }
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: Seconds to wait before retrying.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri, examples: ["https://yos.example/errors/rate-limited"] }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+    JobResult:
+      type: object
+      required: [status, processed, failed, parked, durationMs]
+      properties:
+        status: { type: string, enum: [ok, partial, failed, skipped] }
+        processed: { type: integer }
+        failed: { type: integer }
+        parked: { type: integer }
+        durationMs: { type: integer }
+    Health:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [status, checks]
+          properties:
+            status: { type: string, enum: [ok, degraded] }
+            checks:
+              type: object
+              properties:
+                database: { type: string, enum: [ok, down] }
+                jobs: { type: string, enum: [ok, degraded, unknown] }
+            alerts: { type: array, items: { type: string } }
+            queues:
+              type: object
+              properties:
+                email_queued: { type: integer }
+                oldest_queued_email_seconds: { type: integer }
+                dead_emails: { type: integer }
+                parked_items: { type: integer }

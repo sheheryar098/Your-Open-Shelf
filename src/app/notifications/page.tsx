@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { fmtDateTime } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Empty } from "@/components/ui";
-import { markAllReadAction } from "@/app/actions/account";
+import { requireUser } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { fmtDateTime } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Empty } from "@/shared/ui/primitives";
+import { markAllReadAction } from "@/features/accounts/api/actions";
 
 export const metadata = { title: "Notifications" };
 

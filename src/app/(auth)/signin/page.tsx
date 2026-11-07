@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { currentUser } from "@/lib/auth/session";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { signInAction } from "@/app/actions/auth";
+import { currentUser } from "@/shared/api/session";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { signInAction } from "@/features/accounts/api/auth-actions";
 
 export const metadata = { title: "Sign in" };
 

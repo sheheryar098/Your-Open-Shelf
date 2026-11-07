@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { DISPUTE_TYPES } from "@/lib/vocab";
-import { fmtDateTime, relative, shortId } from "@/lib/format";
-import { Badge, Empty } from "@/components/ui";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { DISPUTE_TYPES } from "@/shared/lib/vocab";
+import { fmtDateTime, relative, shortId } from "@/shared/lib/format";
+import { Badge, Empty } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Disputes" };
 

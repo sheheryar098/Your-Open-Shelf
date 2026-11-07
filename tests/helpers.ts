@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { pool, tx } from "@/lib/db";
-import { setNow } from "@/lib/clock";
-import { hashPassword } from "@/lib/auth/password";
+import { pool, tx } from "@/server/db";
+import { setNow } from "@/server/clock";
+import { hashPassword } from "@/server/auth/password";
 import { seedReferenceData } from "../scripts/reference-data";
 import { placeholderPng } from "../scripts/png";
-import { saveBuffer } from "@/domain/files";
-import { createListing, publishListing } from "@/domain/listings";
-import { adminAdjust } from "@/domain/credits";
-import { saveAddress } from "@/domain/support";
+import { saveBuffer } from "@/server/domain/files";
+import { createListing, publishListing } from "@/server/domain/listings";
+import { adminAdjust } from "@/server/domain/credits";
+import { saveAddress } from "@/server/domain/support";
 
 let passwordHash: string | null = null;
 
@@ -16,7 +16,7 @@ export async function resetData() {
   await pool().query(`TRUNCATE users, sessions, email_tokens, files, addresses, books, listings, listing_photos, exchanges,
     exchange_addresses, exchange_events, shipments, messages, credit_accounts, credit_ledger, wishlist_items, reviews,
     notifications, email_outbox, disputes, dispute_messages, reports, support_tickets, ticket_messages, admin_audit_logs,
-    announcements, job_runs, shipping_routes, countries CASCADE`);
+    announcements, job_runs, job_failures, cache_entries, cache_metrics, shipping_routes, countries CASCADE`);
   await seedReferenceData(pool());
 }
 
@@ -42,17 +42,16 @@ export async function makeUser(opts: { country?: string; role?: string; credits?
   return { id, addressId };
 }
 
-let adminId: string | null = null;
 export async function adminUser() {
   const existing = await pool().query<{ id: string }>("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
-  if (existing.rows[0]) return (adminId = existing.rows[0].id);
+  if (existing.rows[0]) return existing.rows[0].id;
   passwordHash ??= await hashPassword("test-password-123");
   const r = await pool().query<{ id: string }>(
     `INSERT INTO users (email, password_hash, display_name, role, country_code, email_verified_at)
      VALUES ($1, $2, 'Admin', 'admin', 'GB', now()) RETURNING id`,
     [`admin-${randomUUID()}@test.yos`, passwordHash],
   );
-  return (adminId = r.rows[0].id);
+  return r.rows[0].id;
 }
 
 export async function makeListing(ownerId: string, opts: { title?: string; scope?: "domestic" | "international"; shipCountries?: string[] } = {}) {
@@ -86,3 +85,16 @@ export async function listingStatus(id: string) {
 }
 
 export const key = () => randomUUID();
+
+/** Runs every scheduled job once and summarizes the exchange transitions. */
+export async function processDue() {
+  const { runJobs } = await import("@/server/jobs/runner");
+  const r = await runJobs();
+  return {
+    expired: r["exchanges.expire-requests"].processed,
+    dispatchMissed: r["exchanges.cancel-missed-dispatch"].processed,
+    autoDelivered: r["exchanges.auto-confirm-delivery"].processed,
+    completed: r["exchanges.complete-after-window"].processed,
+    all: r,
+  };
+}

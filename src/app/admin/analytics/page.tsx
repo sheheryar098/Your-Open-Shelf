@@ -1,6 +1,6 @@
-import { requirePermission } from "@/lib/auth/session";
-import { kpis } from "@/domain/analytics";
-import { countryName } from "@/lib/countries";
+import { requirePermission } from "@/shared/api/session";
+import { kpis } from "@/server/domain/analytics";
+import { countryName } from "@/shared/lib/countries";
 
 export const metadata = { title: "Analytics" };
 

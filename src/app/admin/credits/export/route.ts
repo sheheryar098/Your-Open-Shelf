@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@/lib/auth/session";
-import { can } from "@/lib/rbac";
-import { query } from "@/lib/db";
-import { audit } from "@/domain/audit";
-import { pool } from "@/lib/db";
+import { problem } from "@/shared/api/http";
+import { currentUser } from "@/shared/api/session";
+import { can } from "@/server/rbac";
+import { query } from "@/server/db";
+import { audit } from "@/server/domain/audit";
+import { pool } from "@/server/db";
 
 function csv(v: unknown) {
   const s = v === null || v === undefined ? "" : v instanceof Date ? v.toISOString() : String(v);
@@ -15,7 +16,7 @@ function csv(v: unknown) {
 /** Reconciliation export (§16.4): per-member summary vs ledger totals. */
 export async function GET() {
   const u = await currentUser();
-  if (!u || !can(u.role, "credits.view")) return new NextResponse("Not found", { status: 404 });
+  if (!u || !can(u.role, "credits.view")) return problem("not-found");
   const rows = await query<Record<string, unknown>>(
     `SELECT u.id AS user_id, u.display_name, coalesce(a.available, 0) AS summary_available, coalesce(a.reserved, 0) AS summary_reserved,
        coalesce(l.av, 0) AS ledger_available, coalesce(l.rs, 0) AS ledger_reserved,

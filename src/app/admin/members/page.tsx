@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { countryName } from "@/lib/countries";
-import { fmtDate } from "@/lib/format";
-import { Badge } from "@/components/ui";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { countryName } from "@/shared/lib/countries";
+import { fmtDate } from "@/shared/lib/format";
+import { Badge } from "@/shared/ui/primitives";
 
 export const metadata = { title: "Members" };
 

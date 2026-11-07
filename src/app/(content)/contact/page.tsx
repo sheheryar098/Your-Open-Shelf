@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@/lib/auth/session";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { createTicketAction } from "@/app/actions/support";
-import { TICKET_CATEGORIES } from "@/lib/vocab";
+import { currentUser } from "@/shared/api/session";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { createTicketAction } from "@/features/support/api/actions";
+import { TICKET_CATEGORIES } from "@/shared/lib/vocab";
 
 export const metadata = { title: "Contact us" };
 

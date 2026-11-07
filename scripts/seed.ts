@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { pool, closePool, tx } from "../src/lib/db";
-import { hashPassword } from "../src/lib/auth/password";
+import { pool, closePool, tx } from "../src/server/db";
+import { hashPassword } from "../src/server/auth/password";
 import { seedReferenceData } from "./reference-data";
 import { placeholderPng } from "./png";
-import { saveBuffer } from "../src/domain/files";
-import { createListing, publishListing } from "../src/domain/listings";
-import { adminAdjust } from "../src/domain/credits";
-import { saveAddress } from "../src/domain/support";
-import { acceptRequest, confirmReceipt, markShipped, requestBook } from "../src/domain/exchanges";
-import { leaveReview } from "../src/domain/exchanges";
+import { saveBuffer } from "../src/server/domain/files";
+import { createListing, publishListing } from "../src/server/domain/listings";
+import { adminAdjust } from "../src/server/domain/credits";
+import { saveAddress } from "../src/server/domain/support";
+import { acceptRequest, confirmReceipt, markShipped, requestBook } from "../src/server/domain/exchanges";
+import { leaveReview } from "../src/server/domain/exchanges";
 
 const DEMO_PASSWORD = "yos-demo-password";
 

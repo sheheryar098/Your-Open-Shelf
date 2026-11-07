@@ -1,8 +1,8 @@
-import { requireUser } from "@/lib/auth/session";
-import { exchangesFor } from "@/domain/exchanges";
-import { TICKET_CATEGORIES } from "@/lib/vocab";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { createTicketAction } from "@/app/actions/support";
+import { requireUser } from "@/shared/api/session";
+import { exchangesFor } from "@/server/domain/exchanges";
+import { TICKET_CATEGORIES } from "@/shared/lib/vocab";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { createTicketAction } from "@/features/support/api/actions";
 
 export const metadata = { title: "New support ticket" };
 

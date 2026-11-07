@@ -1,15 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { currentUser } from "@/lib/auth/session";
-import { chosenCountry, suggestedCountry } from "@/lib/geo";
-import { countryName } from "@/lib/countries";
-import { can } from "@/lib/rbac";
-import { query, queryOne } from "@/lib/db";
-import { unreadCount } from "@/domain/notifications";
-import { setCountryAction, signOutAction } from "./actions/auth";
-import { CountrySelect } from "@/components/ui";
-import { Flash } from "@/components/Flash";
+import { currentUser } from "@/shared/api/session";
+import { chosenCountry, suggestedCountry } from "@/shared/api/geo";
+import { countryName } from "@/shared/lib/countries";
+import { can } from "@/server/rbac";
+import { query, queryOne } from "@/server/db";
+import { unreadCount } from "@/server/domain/notifications";
+import { setCountryAction, signOutAction } from "@/features/accounts/api/auth-actions";
+import { CountrySelect } from "@/shared/ui/primitives";
+import { Flash } from "@/shared/ui/Flash";
 import { cookies } from "next/headers";
 
 export const metadata: Metadata = {

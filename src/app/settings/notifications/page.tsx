@@ -1,7 +1,7 @@
-import { requireUser } from "@/lib/auth/session";
-import { NOTIFICATION_TYPES } from "@/domain/notifications";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { notificationPrefsAction } from "@/app/actions/account";
+import { requireUser } from "@/shared/api/session";
+import { NOTIFICATION_TYPES } from "@/server/domain/notifications";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { notificationPrefsAction } from "@/features/accounts/api/actions";
 
 export const metadata = { title: "Notification preferences" };
 

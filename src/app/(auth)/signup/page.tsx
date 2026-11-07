@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { currentUser } from "@/lib/auth/session";
-import { chosenCountry, suggestedCountry } from "@/lib/geo";
-import { policy } from "@/lib/config";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { CountrySelect } from "@/components/ui";
-import { registerAction } from "@/app/actions/auth";
+import { currentUser } from "@/shared/api/session";
+import { chosenCountry, suggestedCountry } from "@/shared/api/geo";
+import { policy } from "@/server/config";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { CountrySelect } from "@/shared/ui/primitives";
+import { registerAction } from "@/features/accounts/api/auth-actions";
 
 export const metadata = { title: "Join YOS" };
 

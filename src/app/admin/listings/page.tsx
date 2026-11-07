@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { countryName } from "@/lib/countries";
-import { CONDITIONS, FORMATS, LISTING_STATUS_LABEL, label } from "@/lib/vocab";
-import { authorsText, fmtDate } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { ListingBadge, BookMedia } from "@/components/ui";
-import { editBookAction, moderateListingAction } from "@/app/actions/admin";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { countryName } from "@/shared/lib/countries";
+import { CONDITIONS, FORMATS, LISTING_STATUS_LABEL, label } from "@/shared/lib/vocab";
+import { authorsText, fmtDate } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { ListingBadge } from "@/features/listings/components/ListingBadge";
+import { BookMedia } from "@/shared/ui/book-media";
+import { editBookAction, moderateListingAction } from "@/features/admin/api/actions";
 
 export const metadata = { title: "Listings & catalog" };
 

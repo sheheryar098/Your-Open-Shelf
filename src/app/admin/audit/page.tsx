@@ -1,6 +1,6 @@
-import { requirePermission } from "@/lib/auth/session";
-import { query } from "@/lib/db";
-import { fmtDateTime } from "@/lib/format";
+import { requirePermission } from "@/shared/api/session";
+import { query } from "@/server/db";
+import { fmtDateTime } from "@/shared/lib/format";
 
 export const metadata = { title: "Audit log" };
 

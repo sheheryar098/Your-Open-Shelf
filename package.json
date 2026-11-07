@@ -7,12 +7,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit",
+    "lint": "eslint . && tsc --noEmit",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/migrate.ts --reset && tsx scripts/seed.ts",
     "jobs": "tsx scripts/jobs.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bundle:check": "tsx scripts/check-bundle.ts",
+    "check": "npm run lint && npm test && npm run build && npm run bundle:check"
   },
   "engines": {
     "node": ">=20"
@@ -30,8 +33,10 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
     "tsx": "^4.23.15",
     "typescript": "5.9",
+    "typescript-eslint": "^8.72.1",
     "vitest": "^5.1.0"
   }
 }

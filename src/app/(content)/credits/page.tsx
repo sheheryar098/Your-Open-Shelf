@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { policy } from "@/lib/config";
+import { policy } from "@/server/config";
 
 export const metadata = { title: "The YOS credit system" };
 

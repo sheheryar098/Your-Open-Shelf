@@ -1,7 +1,7 @@
-import { requireUser } from "@/lib/auth/session";
-import { fmtDate } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { changePasswordAction, closeAccountAction } from "@/app/actions/account";
+import { requireUser } from "@/shared/api/session";
+import { fmtDate } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { changePasswordAction, closeAccountAction } from "@/features/accounts/api/actions";
 
 export const metadata = { title: "Account & privacy" };
 
@@ -31,7 +31,7 @@ export default async function AccountSettings() {
       <section className="card">
         <h2>Your data</h2>
         <p className="small">Download a copy of everything YOS holds about you: profile, addresses, listings, exchanges, credit history, reviews and support tickets.</p>
-        <a href="/api/me/export" className="btn">Download my data (JSON)</a>
+        <a href="/api/v1/me/export" className="btn">Download my data (JSON)</a>
       </section>
       <section className="card" style={{ borderColor: "var(--danger)" }}>
         <h2>Close account</h2>

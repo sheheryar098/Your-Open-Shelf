@@ -1,5 +1,5 @@
-import { closePool } from "../src/lib/db";
-import { runJobs } from "../src/domain/jobs";
+import { closePool } from "../src/server/db";
+import { runJobs } from "../src/server/jobs/runner";
 
 /** Run scheduled work once (deadlines, auto-confirmation, completion, reminders, email). Schedule via cron. */
 runJobs()

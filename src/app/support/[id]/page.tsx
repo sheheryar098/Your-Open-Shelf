@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
-import { getTicketForViewer } from "@/domain/support";
-import { TICKET_CATEGORIES } from "@/lib/vocab";
-import { fmtDateTime, shortId } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge } from "@/components/ui";
-import { replyTicketAction } from "@/app/actions/support";
+import { requireUser } from "@/shared/api/session";
+import { getTicketForViewer } from "@/server/domain/support";
+import { TICKET_CATEGORIES } from "@/shared/lib/vocab";
+import { fmtDateTime, shortId } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Badge } from "@/shared/ui/primitives";
+import { replyTicketAction } from "@/features/support/api/actions";
 
 export const metadata = { title: "Support ticket" };
 

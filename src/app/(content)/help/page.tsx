@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FaqList, HELP_FAQ } from "../faq-data";
+import { HELP_FAQ } from "@/features/content/model/faq";
+import { FaqList } from "@/features/content/components/FaqList";
 
 export const metadata = { title: "Help center" };
 

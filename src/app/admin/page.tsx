@@ -1,19 +1,18 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth/session";
-import { overview } from "@/domain/analytics";
-import { reconcile } from "@/domain/credits";
-import { queryOne } from "@/lib/db";
-import { can } from "@/lib/rbac";
-import { fmtDateTime } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { runJobsAction } from "@/app/actions/admin";
+import { requirePermission } from "@/shared/api/session";
+import { overview } from "@/server/domain/analytics";
+import { reconcile } from "@/server/domain/credits";
+import { can } from "@/server/rbac";
+import { jobHealth } from "@/server/jobs/runner";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { runJobsAction } from "@/features/admin/api/actions";
 
 export default async function AdminOverview() {
   const u = await requirePermission("staff.access");
-  const [o, mismatches, lastJobs] = await Promise.all([
+  const [o, mismatches, health] = await Promise.all([
     overview(),
     reconcile(),
-    queryOne<{ last_run_at: Date }>("SELECT last_run_at FROM job_runs WHERE name = 'all'"),
+    jobHealth(),
   ]);
   const tile = (v: number | string, k: string, href?: string, accent = false) =>
     href ? <Link href={href} className={`stat ${accent ? "stat-accent" : ""}`}><div className="v">{v}</div><div className="k">{k}</div></Link>
@@ -21,6 +20,7 @@ export default async function AdminOverview() {
   return (
     <>
       <h1>Overview</h1>
+      {!health.ok && <div className="alert alert-error">Background jobs need attention: {health.alerts[0]} <Link href="/admin/jobs">Details</Link></div>}
       {mismatches.length > 0 && (
         <div className="alert alert-error">Credit ledger reconciliation found {mismatches.length} mismatched account(s). <Link href="/admin/credits">Investigate</Link></div>
       )}
@@ -54,15 +54,17 @@ export default async function AdminOverview() {
           {tile(mismatches.length === 0 ? "✓" : mismatches.length, "Ledger reconciliation")}
         </div>
       </section>
-      {can(u.role, "exchanges.intervene") && (
-        <section className="card card-flat">
-          <h3>Scheduled jobs</h3>
-          <p className="small muted">Deadlines, auto-confirmation, completion, reminders, stale listings, address redaction and email delivery. Last run: {lastJobs ? fmtDateTime(lastJobs.last_run_at) : "never"}.</p>
-          <ActionForm action={runJobsAction}>
-            <SubmitButton className="btn btn-sm">Run now</SubmitButton>
+      <section className={`card card-flat`} style={health.ok ? undefined : { borderColor: "var(--danger)" }}>
+        <div className="card-header"><h3>Scheduled jobs</h3><Link href="/admin/jobs" className="small">Jobs &amp; queues →</Link></div>
+        {health.ok ? <p className="small muted mb-0">All jobs healthy. {health.emailQueued} email(s) queued.</p> : (
+          <ul className="small mb-0">{health.alerts.map((a) => <li key={a}>{a}</li>)}</ul>
+        )}
+        {can(u.role, "exchanges.intervene") && (
+          <ActionForm action={runJobsAction} className="row">
+            <SubmitButton className="btn btn-sm">Run all jobs now</SubmitButton>
           </ActionForm>
-        </section>
-      )}
+        )}
+      </section>
     </>
   );
 }

@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
-import { getDisputeForViewer } from "@/domain/exchanges";
-import { DISPUTE_TYPES } from "@/lib/vocab";
-import { fmtDateTime, shortId } from "@/lib/format";
-import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { Badge } from "@/components/ui";
-import { disputeMessageAction, withdrawDisputeAction } from "@/app/actions/exchanges";
-import { resolveDisputeAction } from "@/app/actions/admin";
+import { requireUser } from "@/shared/api/session";
+import { getDisputeForViewer } from "@/server/domain/exchanges";
+import { DISPUTE_TYPES } from "@/shared/lib/vocab";
+import { fmtDateTime, shortId } from "@/shared/lib/format";
+import { ActionForm, SubmitButton } from "@/shared/ui/ActionForm";
+import { Badge } from "@/shared/ui/primitives";
+import { disputeMessageAction, withdrawDisputeAction } from "@/features/exchanges/api/actions";
+import { resolveDisputeAction } from "@/features/admin/api/actions";
 
 export const metadata = { title: "Dispute" };
 
