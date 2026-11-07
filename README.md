@@ -6,12 +6,9 @@
 
 YOS is a community book exchange. Members list physical books they own, other members request them with credits, and the owner posts the book directly to the reader. When the exchange completes, the sender earns a credit to spend on any other book on the shelf. Nobody has to find someone who wants their exact book.
 
-![YOS home page](docs/screenshots/home.png)
-
 ## Contents
 
 - [Features](#features)
-- [Screenshots](#screenshots)
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
 - [Configuration](#configuration)
@@ -42,20 +39,6 @@ YOS is a community book exchange. Members list physical books they own, other me
 - Country and shipping-route controls: tracking rules, delivery estimates, customs notices, weight limits
 - Analytics on completed exchanges, dispatch times, disputes and route performance
 - Job and email monitoring, plus an audit log of every staff action
-
-## Screenshots
-
-| Explore books                                | Book page                              |
-| -------------------------------------------- | -------------------------------------- |
-| ![Explore books](docs/screenshots/explore.png) | ![Book page](docs/screenshots/book.png) |
-
-| A request waiting for the sender                     | Credit wallet                              |
-| ---------------------------------------------------- | ------------------------------------------ |
-| ![Exchange page](docs/screenshots/exchange.png)      | ![Credit wallet](docs/screenshots/wallet.png) |
-
-| Admin overview                             | On a phone                                         |
-| ------------------------------------------ | -------------------------------------------------- |
-| ![Admin overview](docs/screenshots/admin.png) | <img src="docs/screenshots/mobile.png" width="260" alt="Home page on a phone"> |
 
 ## Tech stack
 
@@ -146,7 +129,7 @@ src/
   shared/     UI primitives, session helpers and small utilities
   server/     business rules, database queries and background jobs
 db/           SQL migrations
-docs/         architecture notes, OpenAPI spec, screenshots
+docs/         architecture notes, OpenAPI spec
 scripts/      migrate, seed, jobs and the bundle budget check
 tests/        integration tests
 ```
@@ -174,7 +157,7 @@ This is the first version: the complete exchange loop, the admin tools and the p
 ## Contributing
 
 1. Create a branch from `main`.
-2. Make your change, following the conventions in [`CLAUDE.md`](CLAUDE.md): where code goes, what may import what, and how credits and staff actions are handled.
+2. Make your change, following the project's conventions: where code goes, what may import what, and how credits and staff actions are handled.
 3. Run `npm run check` and make sure it passes.
 4. Open a pull request. CI runs the same checks against PostgreSQL.
 
