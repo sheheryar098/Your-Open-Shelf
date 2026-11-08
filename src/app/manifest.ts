@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "A community book exchange powered by credits.",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf7f1",
-    theme_color: "#1f6b5c",
+    background_color: "#f4f3ee",
+    theme_color: "#2a3f86",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
   };
 }

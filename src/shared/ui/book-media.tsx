@@ -8,11 +8,12 @@ function hashHue(s: string) {
 
 /** Placeholder cover drawn from the title. We don't show publisher cover art until we have a licence for it. */
 export function Cover({ title, authors }: { title: string; authors?: string[] }) {
+  // Deep, muted bindings: the cream title lettering stays readable on every hue.
   const hue = hashHue(title);
   return (
     <div
       className="cover"
-      style={{ background: `linear-gradient(160deg, hsl(${hue} 42% 36%), hsl(${(hue + 25) % 360} 45% 50%))` }}
+      style={{ background: `linear-gradient(160deg, hsl(${hue} 40% 26%), hsl(${(hue + 20) % 360} 36% 38%))` }}
       aria-hidden="true"
     >
       <div className="t">{title}</div>

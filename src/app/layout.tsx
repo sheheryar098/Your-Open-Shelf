@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Atkinson_Hyperlegible, IBM_Plex_Mono, Libre_Caslon_Text } from "next/font/google";
 import "./globals.css";
 import { currentUser } from "@/shared/api/session";
 import { chosenCountry, suggestedCountry } from "@/shared/api/geo";
@@ -13,6 +14,25 @@ import { CountrySelect } from "@/shared/ui/primitives";
 import { Flash } from "@/shared/ui/Flash";
 import { cookies } from "next/headers";
 
+// Fonts are downloaded at build time and served from our own origin, so visitors make no request to Google.
+// Caslon is the classic English book face; Atkinson Hyperlegible keeps ISBNs, addresses and tracking numbers
+// unambiguous; Plex Mono is for small catalogue-style labels only.
+const display = Libre_Caslon_Text({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+  display: "swap",
+});
+const body = Atkinson_Hyperlegible({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-body",
+  display: "swap",
+});
+const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
+
 export const metadata: Metadata = {
   title: { default: "YOS — Your Open Shelf", template: "%s · YOS" },
   description:
@@ -23,8 +43,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf7f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#14171d" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f3ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#10141f" },
   ],
 };
 
@@ -73,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const flash = (await cookies()).get("yos_flash")?.value;
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
         <a href="#main" className="skip-link">
           Skip to content
